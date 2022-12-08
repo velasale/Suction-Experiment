@@ -33,15 +33,20 @@ void setup() {
   Serial.println("MPRLS Simple Test")
   if (! mpr.begin()) {
     Serial.println("Failed to communicate with MPRLS sensor, check wiring?")
+    while (1) {
+      delay(10);
+    }
   }
-  // put your setup code here, to run once:
-
+  Serial.println("Found MPRLS sensor")
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  float pressure_hPa = mpr.rearPressure();
 
   // Read Sensor
+  Serial.print("Pressure (hPa): "); Serial.println(pressure_hPa);
+  Serial.print("Pressure (PSI): "); Serial.println(pressure_hPa / 68.947572932);
+  delay(1000);
 
   // Actuate Valve
 
