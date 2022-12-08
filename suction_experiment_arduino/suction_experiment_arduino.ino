@@ -19,6 +19,7 @@
  *
  */
 #include <ros.h>
+#include <std_msgs/Bool.h>
 #include <Wire.h>
 #include "Adafruit_MPRLS.h"
 
@@ -27,15 +28,32 @@
 #define EOC_PIN   -1
 Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN)
 
+std_msgs::Float32 press_msg;
+ros::NodeHandle nh;
+ros::Publisher pub_press("pressure", &press_msg);
+ros::Subscriber<std_msgs::Empty> sub_valve("toggle_valve", &messageCb);
+
+void messageCb(const std_msgs::Empty& toggle_msg){
+  digitalWrite(2, HIGH-digitalRead(2));
+}
+
 // Constants
 const int valvePin = 2;   // output pin for valve
+const int sensorAddress = 0x18
+
+// Variables
+long publisher_timer;
 
 
 void setup() {
   // Initialize VALVE pin as output
   pinMode(valvePin, OUTPUT);
 
+  // ROS stuff
+  nh.initNode();
+  nh.subscribe(sub);
 
+  // Serial Port
   Serial.begin(115200)
   Serial.println("MPRLS Simple Test")
   if (! mpr.begin()) {
@@ -50,10 +68,16 @@ void setup() {
 void loop() {
   float pressure_hPa = mpr.rearPressure();
 
+  while (!nh.connected()){
+     nh.spinOnce();
+  }
+
+
   // Read Sensor
   Serial.print("Pressure (hPa): "); Serial.println(pressure_hPa);
   Serial.print("Pressure (PSI): "); Serial.println(pressure_hPa / 68.947572932);
   delay(1000);
+ 
 
   // Actuate Valve
   digitalWrite(valvePin, HIGH);
