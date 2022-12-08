@@ -18,7 +18,7 @@
  * MIT license, all text here must be included in any redistribution.
  *
  */
-
+#include <ros.h>
 #include <Wire.h>
 #include "Adafruit_MPRLS.h"
 
@@ -27,8 +27,15 @@
 #define EOC_PIN   -1
 Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN)
 
+// Constants
+const int valvePin = 2;   // output pin for valve
+
 
 void setup() {
+  // Initialize VALVE pin as output
+  pinMode(valvePin, OUTPUT);
+
+
   Serial.begin(115200)
   Serial.println("MPRLS Simple Test")
   if (! mpr.begin()) {
@@ -49,6 +56,9 @@ void loop() {
   delay(1000);
 
   // Actuate Valve
-
+  digitalWrite(valvePin, HIGH);
+  delay(1000);
+  digitalWrite(valvePin, LOW);
+  delay;
 
 }
