@@ -18,28 +18,39 @@
  * MIT license, all text here must be included in any redistribution.
  *
  */
-#include <ros.h>
-#include <std_msgs/Bool.h>
+
+
 #include <Wire.h>
 #include "Adafruit_MPRLS.h"
 
 //You don't *need* a reset and EOC pin for most usees, so we set to -1 and don't connect
 #define RESET_PIN -1
 #define EOC_PIN   -1
-Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN)
+Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
 
-std_msgs::Float32 press_msg;
+
+/*************************** Base ROS Setup ******************************/
+// General ROS packages/nodes
+#include <ros.h>
 ros::NodeHandle nh;
-ros::Publisher pub_press("pressure", &press_msg);
-ros::Subscriber<std_msgs::Empty> sub_valve("toggle_valve", &messageCb);
 
-void messageCb(const std_msgs::Empty& toggle_msg){
-  digitalWrite(2, HIGH-digitalRead(2));
-}
+#include <std_msgs/Float32.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Empty.h>
+
+// Variables to be published
+std_msgs::Float32 press_msg;
+std_msgs::String str_msg;
+
+// Topics
+ros::Publisher pub_press("pressure", &press_msg);
+ros::Publisher chatter("chatter", &str_msg);
+
 
 // Constants
 const int valvePin = 2;   // output pin for valve
-const int sensorAddress = 0x18
+const int sensorAddress = 0x18;
+char hello[13] = "hello world!";
 
 // Variables
 long publisher_timer;
@@ -49,40 +60,44 @@ void setup() {
   // Initialize VALVE pin as output
   pinMode(valvePin, OUTPUT);
 
+  Wire.begin();
+
   // ROS stuff
   nh.initNode();
-  nh.subscribe(sub);
-
-  // Serial Port
-  Serial.begin(115200)
-  Serial.println("MPRLS Simple Test")
-  if (! mpr.begin()) {
-    Serial.println("Failed to communicate with MPRLS sensor, check wiring?")
-    while (1) {
-      delay(10);
-    }
-  }
-  Serial.println("Found MPRLS sensor")
+  nh.advertise(pub_press);
+  nh.advertise(chatter);  
 }
 
+
 void loop() {
-  float pressure_hPa = mpr.rearPressure();
 
-  while (!nh.connected()){
-     nh.spinOnce();
+  if (millis() > publisher_timer){
+    Wire.requestFrom(sensorAddress,4);
+    delay(10);
+    if (4 <=Wire.available())
+    {
+      byte first;
+      byte second;
+      byte third;
+      byte fourth;
+            
+      float pres;
+
+      first = Wire.read();
+      second = Wire.read();
+      third = Wire.read();
+      fourth = Wire.read();
+      
+      pres = first + second + third + fourth;
+
+      press_msg.data = pres;
+      pub_press.publish(&press_msg);      
+    }
+
+  publisher_timer = millis() + 200;
+    
   }
-
-
-  // Read Sensor
-  Serial.print("Pressure (hPa): "); Serial.println(pressure_hPa);
-  Serial.print("Pressure (PSI): "); Serial.println(pressure_hPa / 68.947572932);
-  delay(1000);
- 
-
-  // Actuate Valve
-  digitalWrite(valvePin, HIGH);
-  delay(1000);
-  digitalWrite(valvePin, LOW);
-  delay;
-
+  
+  nh.spinOnce();
+  
 }
