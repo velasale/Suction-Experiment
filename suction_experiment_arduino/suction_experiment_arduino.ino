@@ -62,40 +62,28 @@ void setup() {
 
   Wire.begin();
 
+
   // ROS stuff
   nh.initNode();
   nh.advertise(pub_press);
-  nh.advertise(chatter);  
+  nh.advertise(chatter);    
 }
 
+// Choice a: Read the sensor using the built-in function mpr.read
+// Chice b: Read the sensor using i2c differently, so it doesnt mess the publishing
+//          using the Wire.h library
 
 void loop() {
 
   if (millis() > publisher_timer){
-    Wire.requestFrom(sensorAddress,4);
-    delay(10);
-    if (4 <=Wire.available())
-    {
-      byte first;
-      byte second;
-      byte third;
-      byte fourth;
-            
-      float pres;
-
-      first = Wire.read();
-      second = Wire.read();
-      third = Wire.read();
-      fourth = Wire.read();
-      
-      pres = first + second + third + fourth;
-
-      press_msg.data = pres;
-      pub_press.publish(&press_msg);      
-    }
-
-  publisher_timer = millis() + 200;
-    
+    float pressure_hPa = mpr.readPressure();
+    str_msg.data = hello;
+    delay(100);
+    press_msg.data = pressure_hPa;
+    pub_press.publish(&press_msg);      
+    chatter.publish(&str_msg);
+   
+    publisher_timer = millis() + 100;    
   }
   
   nh.spinOnce();
