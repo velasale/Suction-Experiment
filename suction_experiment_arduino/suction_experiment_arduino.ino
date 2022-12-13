@@ -40,11 +40,33 @@ ros::NodeHandle nh;
 
 // Variables to be published
 std_msgs::Float32 press_msg;
-std_msgs::String str_msg;
+std_msgs::String messages_message;
+ros::Publisher publisher_messages("/gripper/messages", &messages_message);
+
+/*************************** ROS Services Setuo **************************/
+#include <std_srvs/Trigger.h>
+//void openValveService(const std_srvs::Trigger::Request &req,
+//                            std_srvs::Trigger::Response &res) {
+//      res.success = openValve();
+//                            }
+//ros::ServiceServer<std_srvs::Trigger::Request,
+//                   std_srvs::Trigger::Response>
+//                   service_open("/gripper/open_valve", &openValveService);
+
+
+void openValve(const std_msgs::Empty& toggle_msg){
+  digitalWrite(LED_BUILTIN, HIGH);    
+}
+
+void closeValve(const std_msgs::Empty& toggle_msg){
+  digitalWrite(LED_BUILTIN, LOW);    
+}
+
 
 // Topics
 ros::Publisher pub_press("pressure", &press_msg);
-ros::Publisher chatter("chatter", &str_msg);
+ros::Subscriber<std_msgs::Empty> sub1("toggle_valve", &openValve);
+ros::Subscriber<std_msgs::Empty> sub2("toggle_valve", &closeValve);
 
 
 // Constants
@@ -58,35 +80,48 @@ long publisher_timer;
 
 void setup() {
   // Initialize VALVE pin as output
-  pinMode(valvePin, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
   Wire.begin();
 
+  // Initialize pressure sensor
   mpr.begin();
 
   // ROS stuff
   nh.initNode();
   nh.advertise(pub_press);
-  nh.advertise(chatter);    
+  nh.subscribe(sub1);
+  nh.subscribe(sub2);
 }
 
-// Choice a: Read the sensor using the built-in function mpr.read
-// Chice b: Read the sensor using i2c differently, so it doesnt mess the publishing
-//          using the Wire.h library
 
 void loop() {
 
   if (millis() > publisher_timer){
     float pressure_hPa = mpr.readPressure();
-    str_msg.data = hello;
     delay(100);
     press_msg.data = pressure_hPa;
     pub_press.publish(&press_msg);      
-    chatter.publish(&str_msg);
    
-    publisher_timer = millis() + 100;    
+    publisher_timer = millis() + 10;    
   }
   
   nh.spinOnce();
   
 }
+
+
+//bool openValve(){
+//  bool success = true;
+//  digitalWrite(LED_BUILTIN, HIGH);  
+//
+//  return success;
+//}
+//
+//
+//bool closeValve(){
+//  bool success = true;
+//  digitalWrite(LED_BUILTIN, LOW);  
+//
+//  return success;
+//}
