@@ -62,6 +62,7 @@ void setup() {
 
   Wire.begin();
 
+  mpr.begin();
 
   // ROS stuff
   nh.initNode();
