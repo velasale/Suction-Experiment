@@ -25,5 +25,7 @@ replace `std::memcpy()` with `memcpy()`
 `gedit ~/.bashrc` and add this line at the end `source ~/<your_ws>/devel/setup.bash` 
 
 # Running
-
+1. Run `roscore` in terminal one
+2. Run `rosrun rosserial_python serial_node.py` in terminal two
+3. Run `rostopic list` in another terminal
    
