@@ -17,12 +17,17 @@ replace `std::memcpy()` with `memcpy()`
 ### ROS
 1. Install ROS [noetic](http://wiki.ros.org/noetic/Installation/Ubuntu)
 2. Create WorkSpace  
-``mkdir -p your_ws/src && cd catkin_ws``
+```console
+mkdir -p your_ws/src && cd catkin_ws
+```
+
 3. Install **rosserial** package  
-``cd <your_ws>/src``  
-``git clone https://github.com/ros-drivers/rosserial.git``  
-``cd <your_ws>``  
-``catkin_make``
+```console
+cd <your_ws>/src  
+git clone https://github.com/ros-drivers/rosserial.git  
+cd <your_ws>  
+catkin_make
+```
 4. Don't forget to source the workspace   
 `gedit ~/.bashrc` and add this line at the end `source ~/<your_ws>/devel/setup.bash` 
 
