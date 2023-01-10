@@ -1,4 +1,6 @@
 # Suction Experiment
+Experiment to test the performance of the suction cup when cartesian and angular noise is added to its position w.r.t. the center of a sphere. This matters for our gripper design, in order to build better insights of the dimensions used in the gripper.
+
 
 # Basic Installation
 
