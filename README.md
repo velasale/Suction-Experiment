@@ -6,7 +6,7 @@ The following steps were performed under Ubuntu 20.04.5 LTS (Focal Fossa)
 
 ### Arduino  
 1. Install Arduino  
-2. Search and install libraries **rosserial** and **adafruit mprls**  
+2. Search and install the libraries **rosserial** and **adafruit mprls**  
 3. If after compiling there are issues with *cstring*, simply:  
 open **msg.h**  
 replace `#include <cstring>` with `#include<string.h>`  
@@ -25,7 +25,9 @@ replace `std::memcpy()` with `memcpy()`
 `gedit ~/.bashrc` and add this line at the end `source ~/<your_ws>/devel/setup.bash` 
 
 # Running
-1. Run `roscore` in terminal one
-2. Run `rosrun rosserial_python serial_node.py` in terminal two
-3. Run `rostopic list` in another terminal
+1. Upload code into **arduino board**.
+2. Check the port name, and make sure it matches the one written at line 50 of **serial_node.py**.
+3. Run `roscore` in terminal one
+4. Run `rosrun rosserial_python serial_node.py` in terminal two
+5. Run `rostopic list` in another terminal
    
