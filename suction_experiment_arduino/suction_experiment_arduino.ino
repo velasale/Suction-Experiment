@@ -99,7 +99,7 @@ void loop() {
 
   if (millis() > publisher_timer){
     float pressure_hPa = mpr.readPressure();
-    delay(100);
+    delay(10);
     press_msg.data = pressure_hPa;
     pub_press.publish(&press_msg);      
    
