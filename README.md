@@ -31,10 +31,21 @@ catkin_make
 4. Don't forget to source the workspace   
 `gedit ~/.bashrc` and add this line at the end `source ~/<your_ws>/devel/setup.bash` 
 
+5. Install **moveit** package
+```console
+sudo apt install ros-noetic-moveit
+```
+
 # Running
 1. Upload code into **arduino board**.
 2. Check the port name, and make sure it matches the one written at line 50 of **serial_node.py**.
-3. Run `roscore` in terminal one
-4. Run `rosrun rosserial_python serial_node.py` in terminal two
+3. Launch the lab setup in terminal one:
+```console
+roslaunch apple_proxy pickApp.launch
+```
+4. Run RosSerial node in terminal two
+```console
+rosrun rosserial_python serial_node.py
+```
 5. Run `rostopic list` in another terminal
    
