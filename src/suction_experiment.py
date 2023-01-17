@@ -89,6 +89,8 @@ class SuctionExperiment():
 
         self.markerTextPublisher = rospy.Publisher('captions', Marker, queue_size=1000)
 
+        self.ref_frame = "world"
+
     def go_preliminary_position(self):
         """ This function is to avoid the robot from travelling around weird points"""
 
@@ -177,6 +179,56 @@ class SuctionExperiment():
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
 
+    def add_cartesian_noise(self, x_noise, y_noise, z_noise):
+
+        # --- Step 1: Read the pose from the "Base_link" into "Tool0"
+        # Listen to the tf topic
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)
+        # Initiate pose object
+        pose_at_world = tf2_geometry_msgs.PoseStamped()
+        pose_at_world.pose = self.move_group.get_current_pose().pose
+        pose_at_world.header.frame_id = self.ref_frame
+        pose_at_world.header.stamp = rospy.Time(0)
+
+        try:
+            # ** It is important to wait for the listener to start listening. Hence the rospy.Duration(1)
+            pose_at_tool = tf_buffer.transform(pose_at_world, "palm", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 2: Add noise
+        # Now that the pose is in the tool's frame, we can add noise easily in the tool's cframe
+        pose_at_tool.pose.position.x = pose_at_tool.pose.position.x + x_noise
+        pose_at_tool.pose.position.y = pose_at_tool.pose.position.y + y_noise
+        pose_at_tool.pose.position.z = pose_at_tool.pose.position.z + z_noise
+
+        # --- Step 3: Convert the pose back into the "Base_Link" reference frame
+        pose_at_tool.header.stamp = rospy.Time(0)
+        try:
+            # ** It is important to wait for the listener to start listening. Hence the rospy.Duration(1)
+            new_pose_at_world = tf_buffer.transform(pose_at_tool, self.ref_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 4: Finally, move to the new pose with noise
+        self.move_group.set_pose_target(new_pose_at_world.pose)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
+
+        # Compare poses
+        pose_goal = new_pose_at_world.pose
+        current_pose = self.move_group.get_current_pose().pose
+        success = all_close(pose_goal, current_pose, 0.01)
+
+        self.pose_noises.append(success)
+        # print("Pose Noises history", self.pose_noises)
+
+        return success
+
+    def move_in_z(self, distance):
+        a=1
 
 def main():
     # Step 1: Place robot at starting position
@@ -184,7 +236,7 @@ def main():
     suction_experiment.go_preliminary_position()
 
     # Step 2: Add noise
-    for step in range():
+    for step in range(5):
 
         # a. Record Data
         # Define name to save data
@@ -200,12 +252,15 @@ def main():
         service_call("openValve")
 
         # d. Add noise to the suction cup's location
+        # suction_experiment.add_cartesian_noise(5, 0, 0)
 
         time.sleep(5)
 
         # e. Approach the surface
+        # suction_experiment.move_in_z(5)
 
         # f. Retrieve from the surface until cup detaches from surface
+        # suction_experiment.move_in_z(-5)
 
         # g. Stop vacuum
         service_call("closeValve")

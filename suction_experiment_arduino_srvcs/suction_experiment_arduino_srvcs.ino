@@ -90,6 +90,8 @@ void setup() {
   // ROS services
   nh.advertiseService(service_open);
   nh.advertiseService(service_close);
+
+  digitalWrite(VALVE, LOW); 
   
 }
 
