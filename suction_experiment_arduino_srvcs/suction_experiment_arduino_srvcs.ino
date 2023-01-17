@@ -43,7 +43,7 @@ ros::NodeHandle nh;
 #include <std_srvs/Trigger.h>
 void closeValveService(const std_srvs::Trigger::Request &req,
                        std_srvs::TriggerResponse &res){
-                        res.success = closeValve();                        
+                       res.success = closeValve();
                        }
 ros::ServiceServer<std_srvs::Trigger::Request,
     std_srvs::Trigger::Response>
@@ -51,9 +51,9 @@ ros::ServiceServer<std_srvs::Trigger::Request,
 
 
 void openValveService(const std_srvs::Trigger::Request &req,
-                       std_srvs::TriggerResponse &res){
-                        res.success = openValve();                        
-                       }
+                      std_srvs::TriggerResponse &res){
+                      res.success = openValve();
+                      }
 ros::ServiceServer<std_srvs::Trigger::Request,
     std_srvs::Trigger::Response>
     service_open("openValve", &openValveService);
