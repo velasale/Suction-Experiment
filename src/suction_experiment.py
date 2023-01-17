@@ -222,13 +222,12 @@ class SuctionExperiment():
         current_pose = self.move_group.get_current_pose().pose
         success = all_close(pose_goal, current_pose, 0.01)
 
-        self.pose_noises.append(success)
+        # self.pose_noises.append(success)
         # print("Pose Noises history", self.pose_noises)
 
         return success
 
-    def move_in_z(self, distance):
-        a=1
+
 
 def main():
     # Step 1: Place robot at starting position
@@ -238,34 +237,29 @@ def main():
     # Step 2: Add noise
     for step in range(5):
 
-        # a. Record Data
-        # Define name to save data
-
-        # b. Start Recording Rosbag file
-        filename = "trial"
+        # a. Start Recording Rosbag file
+        filename = "trial_" + str(step)
         topics = "/gripper/pressure"
         command = "rosbag record -O " + filename + " " + topics
         command = shlex.split(command)
         rosbag_process = subprocess.Popen(command)
 
-        # c. Apply vacuum
+        # b. Apply vacuum
         service_call("openValve")
 
-        # d. Add noise to the suction cup's location
-        # suction_experiment.add_cartesian_noise(5, 0, 0)
+        # c. Add noise to the suction cup's location
+        suction_experiment.add_cartesian_noise(0.05, 0, 0)
 
-        time.sleep(5)
+        # d. Approach the surface
+        suction_experiment.add_cartesian_noise(0, 0, 0.05)
 
-        # e. Approach the surface
-        # suction_experiment.move_in_z(5)
+        # e. Retrieve from the surface until cup detaches from surface
+        suction_experiment.add_cartesian_noise(0, 0, -0.05)
 
-        # f. Retrieve from the surface until cup detaches from surface
-        # suction_experiment.move_in_z(-5)
-
-        # g. Stop vacuum
+        # f. Stop vacuum
         service_call("closeValve")
 
-        # h. Stop recording
+        # g. Stop recording
         terminate_saving_rosbag(command, rosbag_process)
 
 

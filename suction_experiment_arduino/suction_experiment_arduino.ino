@@ -47,7 +47,7 @@ ros::Publisher publisher_messages("/gripper/messages", &messages_message);
 
 std_msgs::UInt16 led_msg;
 
-/*************************** ROS Services Setuo **************************/
+/*************************** ROS Services Setup **************************/
 void subscriberCallback(const std_msgs::UInt16& led_msg)
 {
   if (led_msg.data  == 1) {
@@ -77,9 +77,8 @@ void setup() {
   // Initialize VALVE pin as output
   pinMode(VALVE, OUTPUT);
 
-  Wire.begin();
-
   // Initialize pressure sensor
+  //Wire.begin();
   mpr.begin();
 
   // ROS stuff
