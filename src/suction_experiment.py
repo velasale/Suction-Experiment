@@ -181,33 +181,37 @@ class SuctionExperiment():
 def main():
     # Step 1: Place robot at starting position
     suction_experiment = SuctionExperiment()
-    # suction_experiment.go_preliminary_position()
+    suction_experiment.go_preliminary_position()
 
     # Step 2: Add noise
+    for step in range():
 
-    # Step 3: Apply vacuum
-    service_call("openValve")
+        # a. Record Data
+        # Define name to save data
 
-    # Step  : Record data
+        # b. Start Recording Rosbag file
+        filename = "trial"
+        topics = "/gripper/pressure"
+        command = "rosbag record -O " + filename + " " + topics
+        command = shlex.split(command)
+        rosbag_process = subprocess.Popen(command)
 
-    # Start Recording Rosbag file
-    filename = "trial"
-    topics = "/gripper/pressure"
-    command = "rosbag record -O " + filename + " " + topics
-    command = shlex.split(command)
-    rosbag_process = subprocess.Popen(command)
+        # c. Apply vacuum
+        service_call("openValve")
 
-    time.sleep(5)
-    terminate_saving_rosbag(command, rosbag_process)
+        # d. Add noise to the suction cup's location
 
-    # Step 3: Apply vacuum
-    service_call("closeValve")
+        time.sleep(5)
 
-    # Step 4: Approach cup towards surface
+        # e. Approach the surface
 
-    # Step 5: Retrieve until cup detaches from surface
+        # f. Retrieve from the surface until cup detaches from surface
 
-    # Go back to step 2 and repeat
+        # g. Stop vacuum
+        service_call("closeValve")
+
+        # h. Stop recording
+        terminate_saving_rosbag(command, rosbag_process)
 
 
 if __name__ == '__main__':
