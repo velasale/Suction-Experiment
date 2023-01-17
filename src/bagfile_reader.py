@@ -12,7 +12,7 @@ def main():
     filename = "trial.bag"
     bag = bagreader(filename)
 
-    topic = "pressure"
+    topic = "/gripper/pressure"
     pressure_data = bag.message_by_topic(topic)
     pressure = pd.read_csv(pressure_data)
 
@@ -27,6 +27,8 @@ def main():
     # --- Plot Results
     plt.plot(elapsed, pressure_values)
     plt.ylim([700, 1300])
+    plt.xlabel('elapsed time [s]')
+    plt.ylabel('atmospheric pressure [hPa]')
     plt.show()
 
 

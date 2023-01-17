@@ -47,6 +47,7 @@ def all_close(goal, actual, tolerance):
 
     return True
 
+
 def terminate_saving_rosbag(cmd, process):
     """
     Method to finish saving RosBag file
@@ -55,6 +56,13 @@ def terminate_saving_rosbag(cmd, process):
         if "record" in proc.name() and set(cmd[2:]).issubset(proc.cmdline()):
             proc.send_signal(subprocess.signal.SIGINT)
     process.send_signal(subprocess.signal.SIGINT)
+
+
+def service_call(service):
+    """Method to call service from the command line.
+    Note: The services are described in the Arduino file"""
+    text = "rosservice call " + service
+    os.system(text)
 
 
 class SuctionExperiment():
@@ -178,18 +186,22 @@ def main():
     # Step 2: Add noise
 
     # Step 3: Apply vacuum
+    service_call("openValve")
 
     # Step  : Record data
 
     # Start Recording Rosbag file
     filename = "trial"
-    topics = "pressure"
+    topics = "/gripper/pressure"
     command = "rosbag record -O " + filename + " " + topics
     command = shlex.split(command)
     rosbag_process = subprocess.Popen(command)
 
-    time.sleep(10)
+    time.sleep(5)
     terminate_saving_rosbag(command, rosbag_process)
+
+    # Step 3: Apply vacuum
+    service_call("closeValve")
 
     # Step 4: Approach cup towards surface
 
