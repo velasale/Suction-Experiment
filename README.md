@@ -47,5 +47,22 @@ roslaunch apple_proxy pickApp.launch
 ```console
 rosrun rosserial_python serial_node.py
 ```
-5. Run `rostopic list` in another terminal
-   
+
+5. Run Experiment code in terminal three
+```console
+python3 suction_experiment.py
+ ```
+
+## Tips  
+If you want to read a certain sensor/topic from command line:
+```console
+rostopic echo /gripper/pressure
+```
+Also, if you want to send a control command from command line:
+```console
+rosservice call openValve
+```
+or
+```console
+rosservice call closeValve
+```
