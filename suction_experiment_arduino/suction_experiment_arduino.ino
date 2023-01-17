@@ -26,6 +26,7 @@
 //You don't *need* a reset and EOC pin for most usees, so we set to -1 and don't connect
 #define RESET_PIN -1
 #define EOC_PIN   -1
+#define VALVE 13
 Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
 
 
@@ -37,36 +38,30 @@ ros::NodeHandle nh;
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 #include <std_msgs/Empty.h>
+#include <std_msgs/UInt16.h>
 
 // Variables to be published
 std_msgs::Float32 press_msg;
 std_msgs::String messages_message;
 ros::Publisher publisher_messages("/gripper/messages", &messages_message);
 
+std_msgs::UInt16 led_msg;
+
 /*************************** ROS Services Setuo **************************/
-#include <std_srvs/Trigger.h>
-//void openValveService(const std_srvs::Trigger::Request &req,
-//                            std_srvs::Trigger::Response &res) {
-//      res.success = openValve();
-//                            }
-//ros::ServiceServer<std_srvs::Trigger::Request,
-//                   std_srvs::Trigger::Response>
-//                   service_open("/gripper/open_valve", &openValveService);
-
-
-void openValve(const std_msgs::Empty& toggle_msg){
-  digitalWrite(LED_BUILTIN, HIGH);    
-}
-
-void closeValve(const std_msgs::Empty& toggle_msg){
-  digitalWrite(LED_BUILTIN, LOW);    
+void subscriberCallback(const std_msgs::UInt16& led_msg)
+{
+  if (led_msg.data  == 1) {
+    digitalWrite(VALVE, HIGH); 
+  } else {
+    digitalWrite(VALVE, LOW);
+  }
 }
 
 
 // Topics
 ros::Publisher pub_press("pressure", &press_msg);
-ros::Subscriber<std_msgs::Empty> sub1("toggle_valve", &openValve);
-ros::Subscriber<std_msgs::Empty> sub2("toggle_valve", &closeValve);
+ros::Subscriber<std_msgs::UInt16> led_subscriber("toggle_led", &subscriberCallback);
+
 
 
 // Constants
@@ -80,7 +75,7 @@ long publisher_timer;
 
 void setup() {
   // Initialize VALVE pin as output
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(VALVE, OUTPUT);
 
   Wire.begin();
 
@@ -90,8 +85,7 @@ void setup() {
   // ROS stuff
   nh.initNode();
   nh.advertise(pub_press);
-  nh.subscribe(sub1);
-  nh.subscribe(sub2);
+  nh.subscribe(led_subscriber);
 }
 
 
@@ -106,22 +100,5 @@ void loop() {
     publisher_timer = millis() + 10;    
   }
   
-  nh.spinOnce();
-  
+  nh.spinOnce();  
 }
-
-
-//bool openValve(){
-//  bool success = true;
-//  digitalWrite(LED_BUILTIN, HIGH);  
-//
-//  return success;
-//}
-//
-//
-//bool closeValve(){
-//  bool success = true;
-//  digitalWrite(LED_BUILTIN, LOW);  
-//
-//  return success;
-//}
