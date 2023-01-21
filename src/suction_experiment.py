@@ -232,14 +232,15 @@ class SuctionExperiment():
 def main():
     # Step 1: Place robot at starting position
     suction_experiment = SuctionExperiment()
-    suction_experiment.go_preliminary_position()
+    # suction_experiment.go_preliminary_position()
 
     # Step 2: Add noise
     for step in range(5):
 
         # a. Start Recording Rosbag file
         filename = "trial_" + str(step)
-        topics = "/gripper/pressure"
+        topics = "/gripper/pressure" \
+                 "wrench"
         command = "rosbag record -O " + filename + " " + topics
         command = shlex.split(command)
         rosbag_process = subprocess.Popen(command)
