@@ -75,7 +75,7 @@ class SuctionExperiment():
         robot = moveit_commander.RobotCommander()
         scene = moveit_commander.PlanningSceneInterface()
 
-        group_name = "manipulator"
+        group_name = "suction_cup"
         move_group = moveit_commander.MoveGroupCommander(group_name)
 
         display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
@@ -107,6 +107,7 @@ class SuctionExperiment():
         wiper.action = wiper.DELETEALL
         self.proxy_markers.markers.append(wiper)
         self.markerPublisher.publish(self.proxy_markers)
+        self.markerTextPublisher.publish(wiper)
 
         self.ref_frame = "base_link"
 
@@ -118,9 +119,9 @@ class SuctionExperiment():
         # # Place a marker for the sampling sphere
         # self.place_marker_sphere(0, 1, 0, 0.2, self.apple_pos_x, self.apple_pos_y, self.apple_pos_z, self.sphereRadius * 2)
 
-        # --- Place a marker for the text
-        self.place_marker_text(0, 0, 1.5, 0.1,
-                               "Going to Preliminary Starting Position")
+        # --- Place a marker with text in RVIZ
+        text = "Going to an Prelim Position"
+        self.place_marker_text(0, 0, 1.5, 0.1, text)
 
         print("SHOULD APPEAR")
 
