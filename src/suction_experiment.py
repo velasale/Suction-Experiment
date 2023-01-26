@@ -109,8 +109,7 @@ class SuctionExperiment():
         self.proxy_markers.markers.append(wiper)
         self.markerPublisher.publish(self.proxy_markers)
         self.markerTextPublisher.publish(wiper)
-
-        self.ref_frame = "base_link"
+        
 
     def go_preliminary_position(self):
         """ This function is to avoid the robot from travelling around weird points"""
@@ -158,48 +157,45 @@ class SuctionExperiment():
         text = "Going to an IDEAL Starting Position"
         self.place_marker_text(0, 0, 1.5, 0.1, text)
 
-
+        # --- ROS tool for transformations among c-frames
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
 
-        # --- Step 1: Goal pose in the "Sphere" coordinate frame
-        pose_goal = tf2_geometry_msgs.PoseStamped()
-        # Goal's Pose Position in [m]
-        pose_goal.pose.position.x = + 11.5 / 200
-        pose_goal.pose.position.y = + 11.5 / 200
-        pose_goal.pose.position.z = - 250 / 1000
 
-        # Goal's Pose Orientation
+        # --- Step 1: Set Goal Pose in the intuitive/easy c-frame
+        goal_pose = tf2_geometry_msgs.PoseStamped()
+        goal_pose.header.frame_id = "sphere"
+        goal_pose.header.stamp = rospy.Time(0)
+
+        goal_pose.pose.position.x = 0.115/2
+        goal_pose.pose.position.y = 0.115/2
+        goal_pose.pose.position.z = 0
+
         roll = 0
         pitch = 0
         yaw = 0
         q = quaternion_from_euler(roll, pitch, yaw)
-        pose_goal.pose.orientation.x = q[0]
-        pose_goal.pose.orientation.y = q[1]
-        pose_goal.pose.orientation.z = q[2]
-        pose_goal.pose.orientation.w = q[3]
+        goal_pose.pose.orientation.x = q[0]
+        goal_pose.pose.orientation.y = q[1]
+        goal_pose.pose.orientation.z = q[2]
+        goal_pose.pose.orientation.w = q[3]
 
-        pose_goal.header.frame_id = "sphere"
-        pose_goal.header.stamp = rospy.Time(0)
-
-        # --- Step 2: Transform the pose to the desired frame
+        # ---- Step 2: Transform Goal Pose into the planning_frame
         try:
-            output_pose_stamped = tf_buffer.transform(pose_goal, "base_link", rospy.Duration(1))
+            goal_pose_pframe = tf_buffer.transform(goal_pose, self.planning_frame, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            raise
+                raise
 
-                # --- Step 3: Move to the goal pose
-        self.move_group.set_pose_target(output_pose_stamped)
+        # --- Step 3: Move to the goal pose
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
         plan = self.move_group.go(wait=True)
         self.move_group.stop()
 
-        # --- Compare the joint goal with the current joint state
+        # --- Step 4: Compare the goal with the current state
         current_pose = self.move_group.get_current_pose().pose
-
-        # Save this pose in a global variable, to come back to it after picking the apple
         self.previous_pose = current_pose
+        success = all_close(goal_pose_pframe.pose, current_pose, 0.01)
 
-        success = all_close(output_pose_stamped.pose, current_pose, 0.01)
         return success
 
     def place_marker_text(self, x, y, z, scale, text):
@@ -258,44 +254,72 @@ class SuctionExperiment():
 
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
 
+
+        # ---- Step 1: Read the current pose in the planning frame
+
+
+        # ---- Step 2: Transform current pose into the intutitive/easy frame and add noise
+
+
+        # ---- Step 3: Move to the goal pose
+
+
+        # --- Step 4: Compare the goal pose with the current pose
+
+        
+
+
+
         # --- Step 1: Read the pose from the "Base_link" into "Tool0"
         # Listen to the tf topic
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
         # Initiate pose object
-        pose_at_world = tf2_geometry_msgs.PoseStamped()
-        pose_at_world.pose = self.move_group.get_current_pose().pose
-        pose_at_world.header.frame_id = "base_link"
-        pose_at_world.header.stamp = rospy.Time(0)
+        pose_at_sphere = tf2_geometry_msgs.PoseStamped()
+        pose_at_sphere.header.frame_id = "sphere"
+        pose_at_sphere.pose = self.move_group.get_current_pose().pose
+        pose_at_sphere.header.stamp = rospy.Time(0)
+
+        print("\n\n\nPose at sphere before noise :\n")
+        print(pose_at_sphere.pose)
+
+
+        pose_at_sphere.pose.position.x += x_noise
+        pose_at_sphere.pose.position.y += y_noise
+        pose_at_sphere.pose.position.z += z_noise
+
+        print("\n\n\nPose at sphere after noise \n")
+        print(pose_at_sphere.pose)
+
 
         try:
             # ** It is important to wait for the listener to start listening. Hence the rospy.Duration(1)
-            pose_at_tool = tf_buffer.transform(pose_at_world, "tool0", rospy.Duration(1))
+            pose_at_ref = tf_buffer.transform(pose_at_sphere, self.ref_frame, rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        # --- Step 2: Add noise
-        # Now that the pose is in the tool's frame, we can add noise easily in the tool's cframe
-        pose_at_tool.pose.position.x = pose_at_tool.pose.position.x + x_noise
-        pose_at_tool.pose.position.y = pose_at_tool.pose.position.y + y_noise
-        pose_at_tool.pose.position.z = pose_at_tool.pose.position.z + z_noise
+        # # --- Step 2: Add noise
+        # # Now that the pose is in the tool's frame, we can add noise easily in the tool's cframe
+        # pose_at_tool.pose.position.x = pose_at_tool.pose.position.x + x_noise
+        # pose_at_tool.pose.position.y = pose_at_tool.pose.position.y + y_noise
+        # pose_at_tool.pose.position.z = pose_at_tool.pose.position.z + z_noise
 
-        # --- Step 3: Convert the pose back into the "Base_Link" reference frame
-        pose_at_tool.header.stamp = rospy.Time(0)
-        try:
-            # ** It is important to wait for the listener to start listening. Hence the rospy.Duration(1)
-            new_pose_at_world = tf_buffer.transform(pose_at_tool, self.ref_frame, rospy.Duration(1))
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            raise
+        # # --- Step 3: Convert the pose back into the "Base_Link" reference frame
+        # pose_at_tool.header.stamp = rospy.Time(0)
+        # try:
+        #     # ** It is important to wait for the listener to start listening. Hence the rospy.Duration(1)
+        #     new_pose_at_world = tf_buffer.transform(pose_at_tool, self.ref_frame, rospy.Duration(1))
+        # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+        #     raise
 
         # --- Step 4: Finally, move to the new pose with noise
-        self.move_group.set_pose_target(new_pose_at_world.pose)
+        self.move_group.set_pose_target(pose_at_ref.pose)
         plan = self.move_group.go(wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()
 
         # Compare poses
-        pose_goal = new_pose_at_world.pose
+        pose_goal = pose_at_ref.pose
         current_pose = self.move_group.get_current_pose().pose
         success = all_close(pose_goal, current_pose, 0.01)
 
@@ -362,7 +386,7 @@ class SuctionExperiment():
 def main():
     # Step 1: Place robot at starting position
     suction_experiment = SuctionExperiment()
-    suction_experiment.go_preliminary_position()
+    # suction_experiment.go_preliminary_position()
     suction_experiment.go_to_starting_position()
 
     # Step 2: Add noise
