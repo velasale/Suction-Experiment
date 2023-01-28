@@ -9,7 +9,7 @@ import numpy as np
 def main():
     # --- Read bagfile
     location = ''
-    filename = "trial_4.bag"
+    filename = "trial_6.bag"
     bag = bagreader(filename)
 
     topic = "/gripper/pressure"
