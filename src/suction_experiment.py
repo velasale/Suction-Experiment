@@ -109,6 +109,13 @@ class SuctionExperiment():
         self.proxy_markers.markers.append(wiper)
         self.markerPublisher.publish(self.proxy_markers)
         self.markerTextPublisher.publish(wiper)
+
+        self.previous_pose = tf2_geometry_msgs.PoseStamped()
+        
+        ## Experiment Parameters
+        self.SUCTION_CUP_SPEC = 0.0122
+        self.OFFSET = 0.02
+        self.SPHERE_RADIUS = 0.075/2
         
 
     def go_preliminary_position(self):
@@ -169,7 +176,8 @@ class SuctionExperiment():
 
         goal_pose.pose.position.x = 0.115/2
         goal_pose.pose.position.y = 0.115/2
-        goal_pose.pose.position.z = 0
+        goal_pose.pose.position.z = - self.OFFSET
+        # goal_pose.pose.position.z = 0
 
         roll = 0
         pitch = 0
@@ -254,78 +262,44 @@ class SuctionExperiment():
 
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
 
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)    
 
         # ---- Step 1: Read the current pose in the planning frame
-
+        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
+        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
+        cur_pose_pframe.header.frame_id = self.planning_frame
+        cur_pose_pframe.header.stamp = rospy.Time(0)
 
         # ---- Step 2: Transform current pose into the intutitive/easy frame and add noise
-
-
-        # ---- Step 3: Move to the goal pose
-
-
-        # --- Step 4: Compare the goal pose with the current pose
-
-        
-
-
-
-        # --- Step 1: Read the pose from the "Base_link" into "Tool0"
-        # Listen to the tf topic
-        tf_buffer = tf2_ros.Buffer()
-        listener = tf2_ros.TransformListener(tf_buffer)
-        # Initiate pose object
-        pose_at_sphere = tf2_geometry_msgs.PoseStamped()
-        pose_at_sphere.header.frame_id = "sphere"
-        pose_at_sphere.pose = self.move_group.get_current_pose().pose
-        pose_at_sphere.header.stamp = rospy.Time(0)
-
-        print("\n\n\nPose at sphere before noise :\n")
-        print(pose_at_sphere.pose)
-
-
-        pose_at_sphere.pose.position.x += x_noise
-        pose_at_sphere.pose.position.y += y_noise
-        pose_at_sphere.pose.position.z += z_noise
-
-        print("\n\n\nPose at sphere after noise \n")
-        print(pose_at_sphere.pose)
-
-
-        try:
-            # ** It is important to wait for the listener to start listening. Hence the rospy.Duration(1)
-            pose_at_ref = tf_buffer.transform(pose_at_sphere, self.ref_frame, rospy.Duration(1))
+        try: 
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, "sphere", rospy.Duration(1))
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        # # --- Step 2: Add noise
-        # # Now that the pose is in the tool's frame, we can add noise easily in the tool's cframe
-        # pose_at_tool.pose.position.x = pose_at_tool.pose.position.x + x_noise
-        # pose_at_tool.pose.position.y = pose_at_tool.pose.position.y + y_noise
-        # pose_at_tool.pose.position.z = pose_at_tool.pose.position.z + z_noise
+        cur_pose_ezframe.pose.position.x += x_noise
+        cur_pose_ezframe.pose.position.y += y_noise
+        cur_pose_ezframe.pose.position.z += z_noise
+        cur_pose_ezframe.header.stamp = rospy.Time(0)
 
-        # # --- Step 3: Convert the pose back into the "Base_Link" reference frame
-        # pose_at_tool.header.stamp = rospy.Time(0)
-        # try:
-        #     # ** It is important to wait for the listener to start listening. Hence the rospy.Duration(1)
-        #     new_pose_at_world = tf_buffer.transform(pose_at_tool, self.ref_frame, rospy.Duration(1))
-        # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-        #     raise
+        # ---- Step 3: Transform again the goal pose into the planning frame
+        try: 
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
 
-        # --- Step 4: Finally, move to the new pose with noise
-        self.move_group.set_pose_target(pose_at_ref.pose)
+        # --- Step 4: Move to the new pose
+
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
         plan = self.move_group.go(wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()
 
-        # Compare poses
-        pose_goal = pose_at_ref.pose
-        current_pose = self.move_group.get_current_pose().pose
-        success = all_close(pose_goal, current_pose, 0.01)
-
-        # self.pose_noises.append(success)
-        # print("Pose Noises history", self.pose_noises)
-
+        # --- Step 5: Compare poses
+        cur_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, cur_pose, 0.01)
+        
         return success
 
     def place_marker_text(self, x, y, z, scale, text):
@@ -382,6 +356,47 @@ class SuctionExperiment():
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
 
+    def move_in_z(self, z):
+
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)    
+
+        # ---- Step 1: Read the current pose in the planning frame
+        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
+        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
+        cur_pose_pframe.header.frame_id = self.planning_frame
+        cur_pose_pframe.header.stamp = rospy.Time(0)
+
+        # ---- Step 2: Transform current pose into the intutitive/easy frame and add noise
+        try: 
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, "sphere", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        cur_pose_ezframe.pose.position.z += z
+        cur_pose_ezframe.header.stamp = rospy.Time(0)
+
+        # ---- Step 3: Transform again the goal pose into the planning frame
+        try: 
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 4: Move to the new pose
+
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
+
+        # --- Step 5: Compare poses
+        cur_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, cur_pose, 0.01)
+        
+        return success
+
+    
 
 def main():
     # Step 1: Place robot at starting position
@@ -389,29 +404,36 @@ def main():
     # suction_experiment.go_preliminary_position()
     suction_experiment.go_to_starting_position()
 
+    steps = 20
+    # noise = suction_experiment.SPHERE_RADIUS / steps
+
+    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
+
     # Step 2: Add noise
-    for step in range(5):
+    for step in range(steps):
 
         # a. Start Recording Rosbag file
         filename = "trial_" + str(step)
         topics = "/gripper/pressure" \
-                 "wrench"
+                 " wrench"
         command = "rosbag record -O " + filename + " " + topics
         command = shlex.split(command)
         rosbag_process = subprocess.Popen(command)
 
-        # b. Apply vacuum
+        # b. Add noise to the suction cup's location
+        noise = - 1 * noise_res
+        print("Noise added: %.2f" %(noise * 1000 * step))
+        #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
+        suction_experiment.add_cartesian_noise(0, 0, noise)   # --> This one is CARTESIAN IN X
+
+        # c. Apply vacuum
         service_call("openValve")
 
-        # c. Add noise to the suction cup's location
-        suction_experiment.add_cartesian_noise(0.01, 0, 0)
-
         # d. Approach the surface
-        # See Movement, vertical max. from https://www.piab.com/suction-cups-and-soft-grippers/round-suction-cups/multibellows-suction-cups/0207063/#specifications
-        suction_experiment.add_cartesian_noise(0, 0, 0.0122)
+        suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
 
-        # e. Retrieve from the surface until cup detaches from surface
-        suction_experiment.add_cartesian_noise(0, 0, -0.05)
+        # e. Retrieve from surface
+        suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
 
         # f. Stop vacuum
         service_call("closeValve")
