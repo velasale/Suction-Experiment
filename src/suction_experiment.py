@@ -13,6 +13,8 @@ import statistics as st
 import subprocess, shlex, psutil
 import sys
 import rosbag
+import json
+import datetime
 
 ## --- Related 3rd party imports
 import geometry_msgs.msg
@@ -113,6 +115,11 @@ class SuctionExperiment():
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
         
         ## Experiment Parameters
+        self.experiment_type = "vertical"
+        self.pressureAtCompressor = 60
+        self.pressureAtValve = 60
+        
+        self.SUCTION_CUP_NAME = "PIAB 0.22"
         self.SUCTION_CUP_SPEC = 0.0122
         self.OFFSET = 0.02
         self.SPHERE_RADIUS = 0.075/2
@@ -396,8 +403,36 @@ class SuctionExperiment():
         
         return success
 
-    
+    def metadata_file(self):
+        """
+        Create json file with metadata
+        """
+        
+        experiment_info = {
+            "generalInfo": {
+                "date": str(datetime.datetime.now()),
+                "experimentType": "vertical"
+            },
+            "robotInfo": {
+                "robot": self.robot,
+                "noise": 1
+            },
+            "gripperInfo": {
+                "Suction Cup": self.SUCTION_CUP_NAME,
+                "pressureAtCompressor": self.pressureAtCompressor,
+                "pressureAtValve": self.pressureAtValve
+            },
+            "surfaceInfo": {
+                "type": "smooth",
+                "radius [m]": self.SPHERE_RADIUS
+            }
+        }
 
+        with open("filename.json", "w") as outfile:
+            json.dump(experiment_info, outfile)
+
+
+    
 def main():
     # Step 1: Place robot at starting position
     suction_experiment = SuctionExperiment()
