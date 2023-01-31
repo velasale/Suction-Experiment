@@ -9,7 +9,7 @@ import numpy as np
 def main():
     # --- Read bagfile
     location = ''
-    filename = "trial_6.bag"
+    filename = "trial_0.bag"
     bag = bagreader(filename)
 
     topic = "/gripper/pressure"
@@ -29,6 +29,8 @@ def main():
     plt.ylim([400, 1300])
     plt.xlabel('elapsed time [s]')
     plt.ylabel('atmospheric pressure [hPa]')
+    plt.title(filename)
+    plt.grid()
     plt.show()
 
 
