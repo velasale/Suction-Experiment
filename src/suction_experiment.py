@@ -53,8 +53,10 @@ def all_close(goal, actual, tolerance):
 def start_saving_rosbag(name="trial"):
     
     filename = name
-    topics = "/gripper/pressure" \
-                 " wrench"
+    topics =    "/gripper/pressure" \
+                " wrench" \
+                " joint_states" \
+                " /camera/image_raw" \
     command = "rosbag record -O " + filename + " " + topics
     print(command)
     command = shlex.split(command)

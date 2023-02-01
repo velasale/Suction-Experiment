@@ -28,7 +28,17 @@ git clone https://github.com/ros-drivers/rosserial.git
 cd <your_ws>  
 catkin_make
 ```
-4. Don't forget to source the workspace   
+
+4. Install **opencv** package
+```console
+cd <your_ws>/src 
+git clone https://github.com/ros-drivers/video_stream_opencv
+cd <your_ws>
+catkin_make
+```
+
+
+5. Don't forget to source the workspace   
 `gedit ~/.bashrc` and add this line at the end `source ~/<your_ws>/devel/setup.bash` 
 
 5. Install **moveit** package
@@ -47,7 +57,10 @@ roslaunch apple_proxy pickApp.launch
 ```console
 rosrun rosserial_python serial_node.py
 ```
-
+4. Run OpenCv streamng in terminal three
+```console
+roslaunch video_stream_opencv camera.launch video_stream_provider:=/dev/video2
+```
 5. Run Experiment code in terminal three
 ```console
 python3 suction_experiment.py
@@ -66,3 +79,6 @@ or
 ```console
 rosservice call closeValve
 ```
+
+Tips for the camera:
+https://askubuntu.com/questions/348838/how-to-check-available-webcams-from-the-command-line
