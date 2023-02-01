@@ -53,10 +53,10 @@ def all_close(goal, actual, tolerance):
 def start_saving_rosbag(name="trial"):
     
     filename = name
-    topics =    "/gripper/pressure" \
-                " wrench" \
-                " joint_states" \
-                " /camera/image_raw" \
+    topics = "/gripper/pressure" \
+                + " wrench" \
+                + " joint_states" \
+                + " /camera/image_raw"
     command = "rosbag record -O " + filename + " " + topics
     print(command)
     command = shlex.split(command)
@@ -133,7 +133,7 @@ class SuctionExperiment():
         self.ROBOT_NAME = "ur5e"
         self.experiment_type = "vertical"
         self.pressureAtCompressor = 100
-        self.pressureAtValve = 60
+        self.pressureAtValve = 70
         
         self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
         self.SUCTION_CUP_SPEC = 0.0122
