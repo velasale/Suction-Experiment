@@ -50,6 +50,18 @@ def all_close(goal, actual, tolerance):
     return True
 
 
+def start_saving_rosbag(name="trial"):
+    
+    filename = name
+    topics = "/gripper/pressure" \
+                 " wrench"
+    command = "rosbag record -O " + filename + " " + topics
+    print(command)
+    command = shlex.split(command)
+    
+    return command, subprocess.Popen(command)
+
+
 def terminate_saving_rosbag(cmd, process):
     """
     Method to finish saving RosBag file
@@ -68,6 +80,7 @@ def service_call(service):
 
 
 class SuctionExperiment():
+
     def __init__(self):
         super(SuctionExperiment, self).__init__()
         moveit_commander.roscpp_initialize(sys.argv)
@@ -115,16 +128,16 @@ class SuctionExperiment():
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
         
         ## Experiment Parameters
+        self.robotName = "ur5e"
         self.experiment_type = "vertical"
-        self.pressureAtCompressor = 60
+        self.pressureAtCompressor = 100
         self.pressureAtValve = 60
         
-        self.SUCTION_CUP_NAME = "PIAB 0.22"
+        self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
         self.SUCTION_CUP_SPEC = 0.0122
         self.OFFSET = 0.02
         self.SPHERE_RADIUS = 0.075/2
         
-
     def go_preliminary_position(self):
         """ This function is to avoid the robot from travelling around weird points"""
 
@@ -184,7 +197,7 @@ class SuctionExperiment():
         goal_pose.pose.position.x = 0.115/2
         goal_pose.pose.position.y = 0.115/2
         goal_pose.pose.position.z = - self.OFFSET
-        # goal_pose.pose.position.z = 0
+        goal_pose.pose.position.z = 0
 
         roll = 0
         pitch = 0
@@ -403,7 +416,7 @@ class SuctionExperiment():
         
         return success
 
-    def metadata_file(self):
+    def save_metadata(self, filename):
         """
         Create json file with metadata
         """
@@ -414,8 +427,8 @@ class SuctionExperiment():
                 "experimentType": "vertical"
             },
             "robotInfo": {
-                "robot": self.robot,
-                "noise": 1
+                "robot": self.robotName,
+                "noise [mm]": 1
             },
             "gripperInfo": {
                 "Suction Cup": self.SUCTION_CUP_NAME,
@@ -428,9 +441,10 @@ class SuctionExperiment():
             }
         }
 
-        with open("filename.json", "w") as outfile:
-            json.dump(experiment_info, outfile)
-
+        filename = filename + ".json"
+        with open(filename, "w") as outfile:
+            json.dump(experiment_info, outfile, indent=4)
+        
 
     
 def main():
@@ -440,48 +454,52 @@ def main():
     
     suction_experiment.go_to_starting_position()
 
-    steps = 20
-    # noise = suction_experiment.SPHERE_RADIUS / steps
+    # steps = 20
+    # # noise = suction_experiment.SPHERE_RADIUS / steps
 
-    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
+    # noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
 
-    # Step 2: Add noise
-    for step in range(steps):
+    # # Step 2: Add noise
+    # for step in range(steps):
 
-        # a. Start Recording Rosbag file
-        filename = "trial_" + str(step)
-        topics = "/gripper/pressure" \
-                 " wrench"
-        command = "rosbag record -O " + filename + " " + topics
-        command = shlex.split(command)
-        rosbag_process = subprocess.Popen(command)
+    #     noise = - 1 * noise_res
 
-        # b. Add noise to the suction cup's location
-        noise = - 1 * noise_res
+    #     # a. Start Recording Rosbag file
+    #     location = os.path.dirname(os.getcwd())        
+    #     foldername = "/data/"
+    #     name = suction_experiment.experiment_type + "_noise_" + str(round(1000*noise*step,2))    
+    #     filename = location + foldername + name    
+    #     command, rosbag_process = start_saving_rosbag(filename)
+
+    #     # b. Add noise to the suction cup's location       
+    #     print("Noise added [mm]: %.2f" %(noise * 1000 * step))
+    #     #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
+
+    #     suction_experiment.add_cartesian_noise(0, 0, noise)   # --> This one is CARTESIAN IN X
+
+    #     # c. Apply vacuum
+    #     time.sleep(0.5)
+    #     service_call("openValve")
+    #     time.sleep(0.01)
+
+    #     # d. Approach the surface
+    #     suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+
+    #     # e. Retrieve from surface
+    #     suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+
+    #     # f. Stop vacuum
+    #     time.sleep(0.01)
+    #     service_call("closeValve")
+    #     time.sleep(0.01)
+
+    #     # g. Stop recording
+    #     terminate_saving_rosbag(command, rosbag_process)
+
+    #     # h. And finally save the metadata
+    #     suction_experiment.save_metadata(filename)
         
-        print("Noise added: %.2f" %(noise * 1000 * step))
-        #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
 
-        suction_experiment.add_cartesian_noise(0, 0, noise)   # --> This one is CARTESIAN IN X
-
-        # c. Apply vacuum
-        time.sleep(0.5)
-        service_call("openValve")
-        time.sleep(0.01)
-
-        # d. Approach the surface
-        suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
-
-        # e. Retrieve from surface
-        suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
-
-        # f. Stop vacuum
-        time.sleep(0.01)
-        service_call("closeValve")
-        time.sleep(0.01)
-
-        # g. Stop recording
-        terminate_saving_rosbag(command, rosbag_process)
 
 
 if __name__ == '__main__':
