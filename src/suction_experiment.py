@@ -436,8 +436,9 @@ class SuctionExperiment():
 def main():
     # Step 1: Place robot at starting position
     suction_experiment = SuctionExperiment()
-    # suction_experiment.go_preliminary_position()
-    suction_experiment.go_to_starting_position()
+    # suction_experiment.go_preliminary_position
+    
+    #suction_experiment.go_to_starting_position()
 
     steps = 20
     # noise = suction_experiment.SPHERE_RADIUS / steps
@@ -457,18 +458,20 @@ def main():
 
         # b. Add noise to the suction cup's location
         noise = - 1 * noise_res
+        
         print("Noise added: %.2f" %(noise * 1000 * step))
         #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
-        suction_experiment.add_cartesian_noise(0, 0, noise)   # --> This one is CARTESIAN IN X
+
+        #suction_experiment.add_cartesian_noise(0, 0, noise)   # --> This one is CARTESIAN IN X
 
         # c. Apply vacuum
         service_call("openValve")
 
         # d. Approach the surface
-        suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        #suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
 
         # e. Retrieve from surface
-        suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        #suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
 
         # f. Stop vacuum
         service_call("closeValve")

@@ -76,6 +76,9 @@ long publisher_timer;
 
 /**************************** Setup ***************************************/
 void setup() {
+  // initialize serial:
+  Serial.begin(9600);
+  
   // Initialize VALVE pin as output
   pinMode(VALVE, OUTPUT);
 
