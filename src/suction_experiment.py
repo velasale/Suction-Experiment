@@ -438,7 +438,7 @@ def main():
     suction_experiment = SuctionExperiment()
     # suction_experiment.go_preliminary_position
     
-    #suction_experiment.go_to_starting_position()
+    suction_experiment.go_to_starting_position()
 
     steps = 20
     # noise = suction_experiment.SPHERE_RADIUS / steps
@@ -462,19 +462,23 @@ def main():
         print("Noise added: %.2f" %(noise * 1000 * step))
         #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
 
-        #suction_experiment.add_cartesian_noise(0, 0, noise)   # --> This one is CARTESIAN IN X
+        suction_experiment.add_cartesian_noise(0, 0, noise)   # --> This one is CARTESIAN IN X
 
         # c. Apply vacuum
+        time.sleep(0.5)
         service_call("openValve")
+        time.sleep(0.01)
 
         # d. Approach the surface
-        #suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
 
         # e. Retrieve from surface
-        #suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
 
         # f. Stop vacuum
+        time.sleep(0.01)
         service_call("closeValve")
+        time.sleep(0.01)
 
         # g. Stop recording
         terminate_saving_rosbag(command, rosbag_process)
