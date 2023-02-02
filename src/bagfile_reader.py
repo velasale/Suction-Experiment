@@ -8,9 +8,10 @@ import numpy as np
 
 def main():
     # --- Read bagfile
-    location = ''
-    filename = "trial_0.bag"
-    bag = bagreader(filename)
+    location = os.path.dirname(os.getcwd())        
+    foldername = "/data/"    
+    filename = "vertical_#5_pres_70_surface_3DprintedPLA_radius_0.0375_noise_-3.05.bag"
+    bag = bagreader(location + foldername + filename)
 
     topic = "/gripper/pressure"
     pressure_data = bag.message_by_topic(topic)
@@ -26,7 +27,7 @@ def main():
 
     # --- Plot Results
     plt.plot(elapsed, pressure_values)
-    plt.ylim([400, 1300])
+    plt.ylim([0, 1300])
     plt.xlabel('elapsed time [s]')
     plt.ylabel('atmospheric pressure [hPa]')
     plt.title(filename)
