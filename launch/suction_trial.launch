@@ -1,13 +1,14 @@
 <launch>
 
+  <!-- Launch robot -->
+  <include file="$(find apple_proxy)/launch/ur5e_bringup.launch">
+    <arg name="robot_ip" value="169.254.174.50"/>
+  </include>
+  
   <!-- Launch lab setup with moveIt -->
   <include file="$(find apple_proxy)/launch/pickApp_real.launch">
   </include>
-
-  <!-- Launch robot -->
-  <include file="$(find apple_proxy)/launch/ur5e_bringup.launch">
-    <param name="robot_ip" value="169.254.174.50"/>
-  </include>
+  
 
   <!-- Launch Camera -->
   <include file="$(find video_stream_opencv)/launch/camera.launch">
