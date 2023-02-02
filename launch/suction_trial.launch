@@ -1,7 +1,7 @@
 <launch>
 
   <!-- Launch lab setup with moveIt -->
-  <include file="$(find apple_proxy)/launch/pickApp.launch">
+  <include file="$(find apple_proxy)/launch/pickApp_real.launch">
   </include>
 
   <!-- Launch robot -->
