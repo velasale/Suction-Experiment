@@ -5,7 +5,9 @@
     <arg name="robot_ip" value="169.254.174.50"/>
   </include>
   
+
   <!-- Launch lab setup with moveIt -->
+  <!-- Remember that line 27 of pickApp_real.launch is commented, to avoid the node issue-->
   <include file="$(find apple_proxy)/launch/pickApp_real.launch">
   </include>
   
