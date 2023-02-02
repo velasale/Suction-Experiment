@@ -17,6 +17,7 @@
     <arg name="video_stream_provider" value="/dev/video2"/>
   </include>
 
+
   <!-- Launch Ros Serial-->
   <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
     <param name="port" value="/dev/ttyACM0" />

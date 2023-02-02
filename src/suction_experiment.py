@@ -127,6 +127,8 @@ class SuctionExperiment():
         self.markerPublisher.publish(self.proxy_markers)
         self.markerTextPublisher.publish(wiper)
 
+        self.noise_z = 0
+
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
         
         ## Experiment Parameters
@@ -431,7 +433,7 @@ class SuctionExperiment():
             },
             "robotInfo": {
                 "robot": self.ROBOT_NAME,
-                "noise [mm]": 1
+                "noise [mm]": self.noise_z
             },
             "gripperInfo": {
                 "Suction Cup": self.SUCTION_CUP_NAME,
@@ -466,6 +468,8 @@ def main():
 
         noise = - 1 * noise_res
         print("Noise added [mm]: %.2f" %(noise * 1000 * step))
+        
+        suction_experiment.noise_z = round(1000*noise*step,2)
 
         # a. Start Recording Rosbag file
         location = os.path.dirname(os.getcwd())        
@@ -475,7 +479,7 @@ def main():
                 + "_pres_" + str(suction_experiment.pressureAtValve) \
                 + "_surface_" + suction_experiment.SURFACE \
                 + "_radius_" + str(suction_experiment.SPHERE_RADIUS) \
-                + "_noise_" + str(round(1000*noise*step,2))    
+                + "_noise_" + str(suction_experiment.noise_z)    
 
         filename = location + foldername + name    
         command, rosbag_process = start_saving_rosbag(filename)        
