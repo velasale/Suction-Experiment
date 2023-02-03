@@ -125,22 +125,25 @@ class SuctionExperiment():
         self.proxy_markers.markers.append(wiper)
         self.markerPublisher.publish(self.proxy_markers)
         self.markerTextPublisher.publish(wiper)
-
-        self.noise_z = 0
-
+      
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
         
         ## Experiment Parameters
         self.ROBOT_NAME = "ur5e"
         self.experiment_type = "vertical"
         self.pressureAtCompressor = 100
-        self.pressureAtValve = 60
+        self.pressureAtValve = 80
         
         self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
         self.SUCTION_CUP_SPEC = 0.0122
         self.OFFSET = 0.02
         self.SPHERE_RADIUS = 0.075/2
         self.SURFACE = "3DprintedPLA"
+
+        ## Experiment Variables
+        self.noise_z_command = 0
+        self.noise_z_real = 0
+        self.start_pose = tf2_geometry_msgs.PoseStamped()
 
     def go_preliminary_position(self):
         """ This function is to avoid the robot from travelling around weird points"""
@@ -202,7 +205,6 @@ class SuctionExperiment():
         goal_pose.pose.position.y = 0.115/2
         goal_pose.pose.position.z = - self.OFFSET
        
-
         roll = 0
         pitch = 0
         yaw = 0
@@ -211,6 +213,8 @@ class SuctionExperiment():
         goal_pose.pose.orientation.y = q[1]
         goal_pose.pose.orientation.z = q[2]
         goal_pose.pose.orientation.w = q[3]
+
+        self.start_pose = goal_pose
 
         # ---- Step 2: Transform Goal Pose into the planning_frame
         try:
@@ -323,6 +327,8 @@ class SuctionExperiment():
         cur_pose = self.move_group.get_current_pose().pose
         success = all_close(goal_pose_pframe.pose, cur_pose, 0.01)
         
+        self.check_real_noise()
+
         return success
 
     def place_marker_text(self, x, y, z, scale, text):
@@ -418,6 +424,29 @@ class SuctionExperiment():
         
         return success
 
+    def check_real_noise(self):
+        """Get the real noise by comparing the star pose with the robot's current pose"""
+
+        start = self.start_pose.pose.position.z
+
+        # Read current pose and transform into the sphere cframe
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)    
+
+        current = self.move_group.get_current_pose()
+        current.header.stamp = rospy.Time(0)
+
+        # ---- Step 2: Transform current pose into the intutitive/easy frame and add noise
+        try: 
+            cur_pose_ezframe = tf_buffer.transform(current, "sphere", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        self.noise_z_real = start - cur_pose_ezframe.pose.position.z
+        
+        print("Commanded noise: %.2f, and Real noise: %.2f" %(self.noise_z_command * 1000, self.noise_z_real * 1000))
+
     def save_metadata(self, filename):
         """
         Create json file with metadata
@@ -430,7 +459,8 @@ class SuctionExperiment():
             },
             "robotInfo": {
                 "robot": self.ROBOT_NAME,
-                "noise [mm]": self.noise_z
+                "z noise command [m]": self.noise_z_command,
+                "z noise real [m]": self.noise_z_real
             },
             "gripperInfo": {
                 "Suction Cup": self.SUCTION_CUP_NAME,
@@ -450,12 +480,10 @@ class SuctionExperiment():
 
     
 def main():
-    # Step 1: Place robot at starting position
+    # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
     # suction_experiment.go_preliminary_position
-    
-    suction_experiment.go_to_starting_position()
-
+        
     steps = 10
     # noise = suction_experiment.SPHERE_RADIUS / steps
     noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
@@ -463,12 +491,12 @@ def main():
     # Step 2: Add noise
     for step in range(steps):
 
-        noise = - 1 * noise_res
-        print("Noise added [mm]: %.2f" %(noise * 1000 * step))
-        
-        suction_experiment.noise_z = round(1000*noise*step,2)
+        print("\n **** Step %d of %d ****" %(step, steps))
 
-        # a. Start Recording Rosbag file
+        suction_experiment.noise_z_command = -1 * noise_res * step
+        noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
+        
+        # --- Start Recording Rosbag file
         location = os.path.dirname(os.getcwd())        
         foldername = "/data/"
         name = suction_experiment.experiment_type \
@@ -476,39 +504,58 @@ def main():
                 + "_pres_" + str(suction_experiment.pressureAtValve) \
                 + "_surface_" + suction_experiment.SURFACE \
                 + "_radius_" + str(suction_experiment.SPHERE_RADIUS) \
-                + "_noise_" + str(suction_experiment.noise_z)    
+                + "_noise_" + str(noise_for_filename)
 
         filename = location + foldername + name    
-        command, rosbag_process = start_saving_rosbag(filename)        
+        command, rosbag_process = start_saving_rosbag(filename)     
+        print("Start recording Rosbag")
+        time.sleep(0.1)   
 
-        # c. Apply vacuum
-        time.sleep(0.5)
+        # --- Move to Starting position
+        print("Moving to starting position")
+        move1 = suction_experiment.go_to_starting_position()
+        print("Move 1:", move1)
+        time.sleep(0.01)
+
+        # --- Add noise to the starting position        
+
+        print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_z_command * 1000))
+        move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
+        print("Move 2:",move2)
+        time.sleep(0.05)
+
+        # --- Apply vacuum
+        print("Applying vaccum")
         service_call("openValve")
-        time.sleep(0.01)
+        time.sleep(0.05)
 
-        # d. Approach the surface
-        move1 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
-        print("\nMove 1:",move1)
+        # --- Approach the surface
+        print("Approaching surface")
+        move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        print("Move 3:",move3)
 
-        # e. Retrieve from surface
-        move2 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
-        print("\nMove 2:",move2)
+        # Wait some time to have a steady state
+        time.sleep(2)
 
-        # f. Stop vacuum
-        time.sleep(0.01)
+        # --- Retrieve from surface
+        print("Retreieving from surface")
+        move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        print("Move 4:",move4)
+        time.sleep(0.05)
+
+        # --- Stop vacuum
+        print("Stop vacuum")
         service_call("closeValve")
-        time.sleep(0.01)
+        time.sleep(0.05)
 
-        # g. Stop recording
+        # --- Stop recording
         terminate_saving_rosbag(command, rosbag_process)
+        print("Stop recording Rosbag")
+        time.sleep(0.1) 
 
-        # h. And finally save the metadata
+        # ---- Ffinally save the metadata
         suction_experiment.save_metadata(filename)
-
-        # i. Add noise to the suction cup's location               
-        #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
-        move3 = suction_experiment.add_cartesian_noise(0, 0, noise)
-        print("\nMove 3:",move3)
+        print("Saving Metadata")        
         
 
 
