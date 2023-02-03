@@ -57,8 +57,7 @@ def start_saving_rosbag(name="trial"):
                 + " wrench" \
                 + " joint_states" \
                 + " /camera/image_raw"
-    command = "rosbag record -O " + filename + " " + topics
-    print(command)
+    command = "rosbag record -O " + filename + " " + topics    
     command = shlex.split(command)
     
     return command, subprocess.Popen(command)
@@ -135,7 +134,7 @@ class SuctionExperiment():
         self.ROBOT_NAME = "ur5e"
         self.experiment_type = "vertical"
         self.pressureAtCompressor = 100
-        self.pressureAtValve = 70
+        self.pressureAtValve = 60
         
         self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
         self.SUCTION_CUP_SPEC = 0.0122
@@ -490,10 +489,16 @@ def main():
         time.sleep(0.01)
 
         # d. Approach the surface
-        suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        move1 = False
+        while move1 == False:
+            move1 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+            print("\nMove 1:",move1)
 
         # e. Retrieve from surface
-        suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        move2 = False
+        while move2 == False:
+            move2 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+            print("\nMove 2:",move2)
 
         # f. Stop vacuum
         time.sleep(0.01)
@@ -508,9 +513,11 @@ def main():
 
         # i. Add noise to the suction cup's location               
         #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
-        suction_experiment.add_cartesian_noise(0, 0, noise)
+        move3 = False
+        while move3 == False:
+            move3 = suction_experiment.add_cartesian_noise(0, 0, noise)
+            print("\nMove 3:",move3)
         
-
 
 
 if __name__ == '__main__':
