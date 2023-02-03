@@ -3,6 +3,7 @@
   <!-- Launch robot -->
   <include file="$(find apple_proxy)/launch/ur5e_bringup.launch">
     <arg name="robot_ip" value="169.254.174.50"/>
+    <arg name="kinematics_config" default="$(find apple_proxy)/calibration/joes_ur5e_calibration.yaml"/>
   </include>
   
 

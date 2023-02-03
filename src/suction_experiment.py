@@ -314,7 +314,6 @@ class SuctionExperiment():
             raise
 
         # --- Step 4: Move to the new pose
-
         self.move_group.set_pose_target(goal_pose_pframe.pose)
         plan = self.move_group.go(wait=True)
         self.move_group.stop()
@@ -407,8 +406,7 @@ class SuctionExperiment():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        # --- Step 4: Move to the new pose
-
+        # --- Step 4: Move to the new pose        
         self.move_group.set_pose_target(goal_pose_pframe.pose)
         plan = self.move_group.go(wait=True)
         self.move_group.stop()
@@ -458,7 +456,7 @@ def main():
     
     suction_experiment.go_to_starting_position()
 
-    steps = 20
+    steps = 10
     # noise = suction_experiment.SPHERE_RADIUS / steps
     noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
 
@@ -489,16 +487,12 @@ def main():
         time.sleep(0.01)
 
         # d. Approach the surface
-        move1 = False
-        while move1 == False:
-            move1 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
-            print("\nMove 1:",move1)
+        move1 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        print("\nMove 1:",move1)
 
         # e. Retrieve from surface
-        move2 = False
-        while move2 == False:
-            move2 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
-            print("\nMove 2:",move2)
+        move2 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        print("\nMove 2:",move2)
 
         # f. Stop vacuum
         time.sleep(0.01)
@@ -513,10 +507,8 @@ def main():
 
         # i. Add noise to the suction cup's location               
         #suction_experiment.add_cartesian_noise(noise* step, 0, 0)   # --> This one is CARTESIAN IN X
-        move3 = False
-        while move3 == False:
-            move3 = suction_experiment.add_cartesian_noise(0, 0, noise)
-            print("\nMove 3:",move3)
+        move3 = suction_experiment.add_cartesian_noise(0, 0, noise)
+        print("\nMove 3:",move3)
         
 
 
