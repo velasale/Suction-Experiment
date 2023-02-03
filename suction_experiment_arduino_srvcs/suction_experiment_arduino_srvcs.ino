@@ -69,6 +69,7 @@ ros::Publisher publisher_pressure("/gripper/pressure", &press_msg);
 
 // Constants
 const int sensorAddress = 0x18;
+const int VALVE_DELAY = 10;
 
 // Variables
 long publisher_timer;
@@ -117,13 +118,17 @@ void loop() {
 /****************************** Control Functions ***************************/
 bool closeValve(){
   bool success = true;
-  digitalWrite(VALVE, LOW); 
+  delay(VALVE_DELAY);
+  digitalWrite(VALVE, LOW);
+  delay(VALVE_DELAY); 
   return success;  
 }
 
 
 bool openValve(){
   bool success = true;
-  digitalWrite(VALVE, HIGH); 
+  delay(VALVE_DELAY);
+  digitalWrite(VALVE, HIGH);
+  delay(VALVE_DELAY); 
   return success;  
 }
