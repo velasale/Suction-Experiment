@@ -56,6 +56,7 @@ def start_saving_rosbag(name="trial"):
     topics = "/gripper/pressure" \
                 + " wrench" \
                 + " joint_states" \
+                + " experiment_steps" \
                 + " /camera/image_raw"
     command = "rosbag record -O " + filename + " " + topics    
     command = shlex.split(command)
@@ -97,7 +98,7 @@ class SuctionExperiment():
 
         display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
         success_or_failure_publisher = rospy.Publisher('/success_or_failure', String, queue_size=20)
-        event_publisher = rospy.Publisher('/experiments_steps', Int32, queue_size=20)
+        event_publisher = rospy.Publisher('/experiment_steps', String, queue_size=20)
 
         # ---- 2 - Display Basic Information in the command line
         planning_frame = move_group.get_planning_frame()
@@ -118,6 +119,7 @@ class SuctionExperiment():
         self.proxy_markers = MarkerArray()
         self.markerPublisher = rospy.Publisher('balloons', MarkerArray, queue_size=1000)
         self.markerTextPublisher = rospy.Publisher('captions', Marker, queue_size=1000)
+        self.event_publisher = event_publisher
 
         wiper = Marker()
         wiper.id = 0
@@ -132,7 +134,7 @@ class SuctionExperiment():
         self.ROBOT_NAME = "ur5e"
         self.experiment_type = "vertical"
         self.pressureAtCompressor = 100
-        self.pressureAtValve = 80
+        self.pressureAtValve = 70
         
         self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
         self.SUCTION_CUP_SPEC = 0.0122
@@ -443,7 +445,7 @@ class SuctionExperiment():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        self.noise_z_real = start - cur_pose_ezframe.pose.position.z
+        self.noise_z_real = cur_pose_ezframe.pose.position.z - start
         
         print("Commanded noise: %.2f, and Real noise: %.2f" %(self.noise_z_command * 1000, self.noise_z_real * 1000))
 
@@ -477,6 +479,8 @@ class SuctionExperiment():
         with open(filename, "w") as outfile:
             json.dump(experiment_info, outfile, indent=4)
         
+    def publish_event(self, event):
+        self.event_publisher.publish(event)
 
     
 def main():
@@ -513,38 +517,49 @@ def main():
 
         # --- Move to Starting position
         print("Moving to starting position")
+        suction_experiment.publish_event("Start")
         move1 = suction_experiment.go_to_starting_position()
         print("Move 1:", move1)
         time.sleep(0.01)
 
-        # --- Add noise to the starting position        
-
+        # --- Add noise to the starting position                
         print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_z_command * 1000))
+        suction_experiment.publish_event("Noise")
+        time.sleep(0.001)
         move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
         print("Move 2:",move2)
-        time.sleep(0.05)
+        time.sleep(0.1)
 
         # --- Apply vacuum
         print("Applying vaccum")
+        suction_experiment.publish_event("Vacuum On")
+        time.sleep(0.001)
         service_call("openValve")
-        time.sleep(0.05)
+        time.sleep(0.1)
 
         # --- Approach the surface
         print("Approaching surface")
+        suction_experiment.publish_event("Approach")
+        time.sleep(0.001)
         move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
         print("Move 3:",move3)
 
         # Wait some time to have a steady state
+        suction_experiment.publish_event("Steady")
         time.sleep(2)
 
         # --- Retrieve from surface
         print("Retreieving from surface")
+        suction_experiment.publish_event("Retreive")
+        time.sleep(0.001)
         move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
         print("Move 4:",move4)
-        time.sleep(0.05)
+        time.sleep(0.1)
 
         # --- Stop vacuum
         print("Stop vacuum")
+        suction_experiment.publish_event("Vacuum Off")
+        time.sleep(0.001)
         service_call("closeValve")
         time.sleep(0.05)
 
@@ -555,8 +570,7 @@ def main():
 
         # ---- Ffinally save the metadata
         suction_experiment.save_metadata(filename)
-        print("Saving Metadata")        
-        
+        print("Saving Metadata")     
 
 
 if __name__ == '__main__':
