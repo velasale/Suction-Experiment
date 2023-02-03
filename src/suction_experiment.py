@@ -81,6 +81,183 @@ def service_call(service):
     os.system(text)
 
 
+def z_noise_experiment(suction_experiment):
+
+    steps = 10
+    # noise = suction_experiment.SPHERE_RADIUS / steps
+    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
+
+    # Step 2: Add noise
+    for step in range(steps):
+
+        print("\n **** Step %d of %d ****" %(step, steps))
+
+        suction_experiment.noise_z_command = -1 * noise_res * step
+        noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
+        
+        # --- Start Recording Rosbag file
+        location = os.path.dirname(os.getcwd())        
+        foldername = "/data/"
+        name = suction_experiment.experiment_type \
+                + "_#" + str(step) \
+                + "_pres_" + str(suction_experiment.pressureAtValve) \
+                + "_surface_" + suction_experiment.SURFACE \
+                + "_radius_" + str(suction_experiment.SPHERE_RADIUS) \
+                + "_noise_" + str(noise_for_filename)
+
+        filename = location + foldername + name    
+        command, rosbag_process = start_saving_rosbag(filename)     
+        print("Start recording Rosbag")
+        time.sleep(0.1)   
+
+        # --- Move to Starting position
+        print("Moving to starting position")
+        suction_experiment.publish_event("Start")
+        move1 = suction_experiment.go_to_starting_position()
+        print("Move 1:", move1)
+        time.sleep(0.01)
+
+        # --- Add noise to the starting position                
+        print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_z_command * 1000))
+        suction_experiment.publish_event("Noise")
+        time.sleep(0.001)
+        move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
+        print("Move 2:",move2)
+        time.sleep(0.1)
+
+        # --- Apply vacuum
+        print("Applying vaccum")
+        suction_experiment.publish_event("Vacuum On")
+        time.sleep(0.001)
+        service_call("openValve")
+        time.sleep(0.1)
+
+        # --- Approach the surface
+        print("Approaching surface")
+        suction_experiment.publish_event("Approach")
+        time.sleep(0.001)
+        move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        print("Move 3:",move3)
+
+        # Wait some time to have a steady state
+        suction_experiment.publish_event("Steady")
+        time.sleep(2)
+
+        # --- Retrieve from surface
+        print("Retreieving from surface")
+        suction_experiment.publish_event("Retreive")
+        time.sleep(0.001)
+        move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        print("Move 4:",move4)
+        time.sleep(0.1)
+
+        # --- Stop vacuum
+        print("Stop vacuum")
+        suction_experiment.publish_event("Vacuum Off")
+        time.sleep(0.001)
+        service_call("closeValve")
+        time.sleep(0.05)
+
+        # --- Stop recording
+        terminate_saving_rosbag(command, rosbag_process)
+        print("Stop recording Rosbag")
+        time.sleep(0.1) 
+
+        # ---- Ffinally save the metadata
+        suction_experiment.save_metadata(filename)
+        print("Saving Metadata")     
+
+
+def x_noise_experiment(suction_experiment):
+
+    steps = 10
+    # noise = suction_experiment.SPHERE_RADIUS / steps
+    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
+
+    # Step 2: Add noise
+    for step in range(steps):
+
+        print("\n **** Step %d of %d ****" %(step, steps))
+
+        suction_experiment.noise_x_command = 1 * noise_res * step
+        noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
+
+        suction_experiment.noise_z_command = suction_experiment.calc_vertical_noise()
+        
+        # --- Start Recording Rosbag file
+        location = os.path.dirname(os.getcwd())        
+        foldername = "/data/"
+        name = suction_experiment.experiment_type \
+                + "_#" + str(step) \
+                + "_pres_" + str(suction_experiment.pressureAtValve) \
+                + "_surface_" + suction_experiment.SURFACE \
+                + "_radius_" + str(suction_experiment.SPHERE_RADIUS) \
+                + "_noise_" + str(noise_for_filename)
+
+        filename = location + foldername + name    
+        command, rosbag_process = start_saving_rosbag(filename)     
+        print("Start recording Rosbag")
+        time.sleep(0.1)   
+
+        # --- Move to Starting position
+        print("Moving to starting position")
+        suction_experiment.publish_event("Start")
+        move1 = suction_experiment.go_to_starting_position()
+        print("Move 1:", move1)
+        time.sleep(0.01)
+
+        # --- Add noise to the starting position                
+        print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_x_command * 1000))
+        suction_experiment.publish_event("Noise")
+        time.sleep(0.001)
+        move2 = suction_experiment.add_cartesian_noise(suction_experiment.noise_x_command, 0, suction_experiment.noise_z_command)
+        print("Move 2:",move2)
+        time.sleep(0.1)
+
+        # --- Apply vacuum
+        print("Applying vaccum")
+        suction_experiment.publish_event("Vacuum On")
+        time.sleep(0.001)
+        service_call("openValve")
+        time.sleep(0.1)
+
+        # --- Approach the surface
+        print("Approaching surface")
+        suction_experiment.publish_event("Approach")
+        time.sleep(0.001)
+        move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        print("Move 3:",move3)
+
+        # Wait some time to have a steady state
+        suction_experiment.publish_event("Steady")
+        time.sleep(2)
+
+        # --- Retrieve from surface
+        print("Retreieving from surface")
+        suction_experiment.publish_event("Retreive")
+        time.sleep(0.001)
+        move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        print("Move 4:",move4)
+        time.sleep(0.1)
+
+        # --- Stop vacuum
+        print("Stop vacuum")
+        suction_experiment.publish_event("Vacuum Off")
+        time.sleep(0.001)
+        service_call("closeValve")
+        time.sleep(0.05)
+
+        # --- Stop recording
+        terminate_saving_rosbag(command, rosbag_process)
+        print("Stop recording Rosbag")
+        time.sleep(0.1) 
+
+        # ---- Ffinally save the metadata
+        suction_experiment.save_metadata(filename)
+        print("Saving Metadata")     
+
+
+
 class SuctionExperiment():
 
     def __init__(self):
@@ -134,7 +311,7 @@ class SuctionExperiment():
         self.ROBOT_NAME = "ur5e"
         self.experiment_type = "vertical"
         self.pressureAtCompressor = 100
-        self.pressureAtValve = 70
+        self.pressureAtValve = 60
         
         self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
         self.SUCTION_CUP_SPEC = 0.0122
@@ -145,6 +322,8 @@ class SuctionExperiment():
         ## Experiment Variables
         self.noise_z_command = 0
         self.noise_z_real = 0
+        self.noise_x_command = 0
+        self.noise_x_real = 0
         self.start_pose = tf2_geometry_msgs.PoseStamped()
 
     def go_preliminary_position(self):
@@ -429,7 +608,8 @@ class SuctionExperiment():
     def check_real_noise(self):
         """Get the real noise by comparing the star pose with the robot's current pose"""
 
-        start = self.start_pose.pose.position.z
+        start_z = self.start_pose.pose.position.z
+        start_x = self.start_pose.pose.position.x
 
         # Read current pose and transform into the sphere cframe
         # --- ROS tool for transformation across c-frames
@@ -445,9 +625,11 @@ class SuctionExperiment():
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-        self.noise_z_real = cur_pose_ezframe.pose.position.z - start
+        self.noise_x_real = cur_pose_ezframe.pose.position.x - start_x
+        self.noise_z_real = cur_pose_ezframe.pose.position.z - start_z
         
-        print("Commanded noise: %.2f, and Real noise: %.2f" %(self.noise_z_command * 1000, self.noise_z_real * 1000))
+        print("Xaxis - Commanded noise: %.2f, and Real noise: %.2f" %(self.noise_x_command * 1000, self.noise_x_real * 1000))
+        print("Zaxis - Commanded noise: %.2f, and Real noise: %.2f" %(self.noise_z_command * 1000, self.noise_z_real * 1000))
 
     def save_metadata(self, filename):
         """
@@ -462,7 +644,10 @@ class SuctionExperiment():
             "robotInfo": {
                 "robot": self.ROBOT_NAME,
                 "z noise command [m]": self.noise_z_command,
-                "z noise real [m]": self.noise_z_real
+                "z noise real [m]": self.noise_z_real,
+                "x noise command [m]": self.noise_x_command,
+                "x noise real [m]": self.noise_x_real
+
             },
             "gripperInfo": {
                 "Suction Cup": self.SUCTION_CUP_NAME,
@@ -482,95 +667,27 @@ class SuctionExperiment():
     def publish_event(self, event):
         self.event_publisher.publish(event)
 
+    def calc_vertical_noise(self):
+        
+        delta_x = self.noise_x_command
+        delta_z = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - delta_x ** 2)
+
+        return delta_z
+
+
     
 def main():
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
     # suction_experiment.go_preliminary_position
-        
-    steps = 10
-    # noise = suction_experiment.SPHERE_RADIUS / steps
-    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
 
-    # Step 2: Add noise
-    for step in range(steps):
-
-        print("\n **** Step %d of %d ****" %(step, steps))
-
-        suction_experiment.noise_z_command = -1 * noise_res * step
-        noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
-        
-        # --- Start Recording Rosbag file
-        location = os.path.dirname(os.getcwd())        
-        foldername = "/data/"
-        name = suction_experiment.experiment_type \
-                + "_#" + str(step) \
-                + "_pres_" + str(suction_experiment.pressureAtValve) \
-                + "_surface_" + suction_experiment.SURFACE \
-                + "_radius_" + str(suction_experiment.SPHERE_RADIUS) \
-                + "_noise_" + str(noise_for_filename)
-
-        filename = location + foldername + name    
-        command, rosbag_process = start_saving_rosbag(filename)     
-        print("Start recording Rosbag")
-        time.sleep(0.1)   
-
-        # --- Move to Starting position
-        print("Moving to starting position")
-        suction_experiment.publish_event("Start")
-        move1 = suction_experiment.go_to_starting_position()
-        print("Move 1:", move1)
-        time.sleep(0.01)
-
-        # --- Add noise to the starting position                
-        print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_z_command * 1000))
-        suction_experiment.publish_event("Noise")
-        time.sleep(0.001)
-        move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
-        print("Move 2:",move2)
-        time.sleep(0.1)
-
-        # --- Apply vacuum
-        print("Applying vaccum")
-        suction_experiment.publish_event("Vacuum On")
-        time.sleep(0.001)
-        service_call("openValve")
-        time.sleep(0.1)
-
-        # --- Approach the surface
-        print("Approaching surface")
-        suction_experiment.publish_event("Approach")
-        time.sleep(0.001)
-        move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
-        print("Move 3:",move3)
-
-        # Wait some time to have a steady state
-        suction_experiment.publish_event("Steady")
-        time.sleep(2)
-
-        # --- Retrieve from surface
-        print("Retreieving from surface")
-        suction_experiment.publish_event("Retreive")
-        time.sleep(0.001)
-        move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
-        print("Move 4:",move4)
-        time.sleep(0.1)
-
-        # --- Stop vacuum
-        print("Stop vacuum")
-        suction_experiment.publish_event("Vacuum Off")
-        time.sleep(0.001)
-        service_call("closeValve")
-        time.sleep(0.05)
-
-        # --- Stop recording
-        terminate_saving_rosbag(command, rosbag_process)
-        print("Stop recording Rosbag")
-        time.sleep(0.1) 
-
-        # ---- Ffinally save the metadata
-        suction_experiment.save_metadata(filename)
-        print("Saving Metadata")     
+    # Perform the z_noise experiment
+    # suction_experiment.experiment_type = "vertical"
+    # z_noise_experiment(suction_experiment)      
+    
+    # Perform x noise experiment
+    suction_experiment.experiment_type = "horizontal"
+    x_noise_experiment(suction_experiment)    
 
 
 if __name__ == '__main__':
