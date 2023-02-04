@@ -81,7 +81,7 @@ def service_call(service):
     os.system(text)
 
 
-def z_noise_experiment(suction_experiment):
+def z_noise_experiment(suction_experiment):   
 
     steps = 10
     # noise = suction_experiment.SPHERE_RADIUS / steps
@@ -171,8 +171,8 @@ def z_noise_experiment(suction_experiment):
 def x_noise_experiment(suction_experiment):
 
     steps = 10
-    # noise = suction_experiment.SPHERE_RADIUS / steps
-    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
+    noise_res = (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
+    #noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
 
     # Step 2: Add noise
     for step in range(steps):
@@ -209,22 +209,20 @@ def x_noise_experiment(suction_experiment):
         # --- Add noise to the starting position                
         print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_x_command * 1000))
         suction_experiment.publish_event("Noise")
-        time.sleep(0.001)
-        move2 = suction_experiment.add_cartesian_noise(suction_experiment.noise_x_command, 0, suction_experiment.noise_z_command)
+        # Note: made the x noise negative, to avoid the robot doing weird movements
+        move2 = suction_experiment.add_cartesian_noise(-1 * suction_experiment.noise_x_command, 0, suction_experiment.noise_z_command)
         print("Move 2:",move2)
         time.sleep(0.1)
 
         # --- Apply vacuum
         print("Applying vaccum")
         suction_experiment.publish_event("Vacuum On")
-        time.sleep(0.001)
         service_call("openValve")
         time.sleep(0.1)
 
         # --- Approach the surface
         print("Approaching surface")
         suction_experiment.publish_event("Approach")
-        time.sleep(0.001)
         move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
         print("Move 3:",move3)
 
@@ -234,8 +232,7 @@ def x_noise_experiment(suction_experiment):
 
         # --- Retrieve from surface
         print("Retreieving from surface")
-        suction_experiment.publish_event("Retreive")
-        time.sleep(0.001)
+        suction_experiment.publish_event("Retrieve")
         move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
         print("Move 4:",move4)
         time.sleep(0.1)
@@ -243,7 +240,6 @@ def x_noise_experiment(suction_experiment):
         # --- Stop vacuum
         print("Stop vacuum")
         suction_experiment.publish_event("Vacuum Off")
-        time.sleep(0.001)
         service_call("closeValve")
         time.sleep(0.05)
 
@@ -311,10 +307,11 @@ class SuctionExperiment():
         self.ROBOT_NAME = "ur5e"
         self.experiment_type = "vertical"
         self.pressureAtCompressor = 100
-        self.pressureAtValve = 60
+        self.pressureAtValve = 50
         
         self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
         self.SUCTION_CUP_SPEC = 0.0122
+        self.SUCTION_CUP_RADIUS = 0.021 / 2
         self.OFFSET = 0.02
         self.SPHERE_RADIUS = 0.075/2
         self.SURFACE = "3DprintedPLA"
@@ -670,6 +667,11 @@ class SuctionExperiment():
     def calc_vertical_noise(self):
         
         delta_x = self.noise_x_command
+
+        # delta x is at the center of the cup, but it needs to be adjusted to the edge of the cup
+        # to avoid jamming it
+        delta_x -= self.SUCTION_CUP_RADIUS
+
         delta_z = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - delta_x ** 2)
 
         return delta_z
@@ -677,17 +679,33 @@ class SuctionExperiment():
 
     
 def main():
+
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
     # suction_experiment.go_preliminary_position
 
-    # Perform the z_noise experiment
-    # suction_experiment.experiment_type = "vertical"
-    # z_noise_experiment(suction_experiment)      
+    # Step 2: Get some info from the user
+    print("\n\n ***** Suction Cups Experiments *****")
+    print("Type of Experiment (vertical or horizontal)")
+    experiment = ''
+    while ((experiment != "vertical") and (experiment != "horizontal")):
+        experiment = input()
+        print(experiment)
+    suction_experiment.experiment_type = str(experiment)
+
+    print("Pressure at the Valve [PSI]): ")
+    suction_experiment.pressureAtValve = int(input())
+
+    # Step 3: Run the experiment
+    if experiment == "vertical":
+        # Perform the z_noise experiment
+        suction_experiment.experiment_type = "vertical"
+        z_noise_experiment(suction_experiment)      
     
-    # Perform x noise experiment
-    suction_experiment.experiment_type = "horizontal"
-    x_noise_experiment(suction_experiment)    
+    elif experiment == "horizontal":
+        # Perform x noise experiment
+        suction_experiment.experiment_type = "horizontal"
+        x_noise_experiment(suction_experiment)    
 
 
 if __name__ == '__main__':
