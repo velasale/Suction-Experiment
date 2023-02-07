@@ -51,13 +51,20 @@ def all_close(goal, actual, tolerance):
 
 
 def start_saving_rosbag(name="trial"):
+    """Start saving a bagfile"""
     
     filename = name
+    # topics = "/gripper/pressure" \
+    #             + " wrench" \
+    #             + " joint_states" \
+    #             + " experiment_steps" \
+    #             + " /camera/image_raw"
+
     topics = "/gripper/pressure" \
                 + " wrench" \
                 + " joint_states" \
-                + " experiment_steps" \
-                + " /camera/image_raw"
+                + " experiment_steps"
+
     command = "rosbag record -O " + filename + " " + topics    
     command = shlex.split(command)
     
@@ -252,6 +259,91 @@ def x_noise_experiment(suction_experiment):
         suction_experiment.save_metadata(filename)
         print("Saving Metadata")     
 
+
+def simple_cup_experiment(suction_experiment):   
+
+    steps = 5
+    # noise = suction_experiment.SPHERE_RADIUS / steps
+    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
+
+    # Step 2: Add noise
+    for step in range(steps):
+
+        print("\n **** Step %d of %d ****" %(step, steps))
+
+        # suction_experiment.noise_z_command = -1 * noise_res * step
+        # noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
+        
+        # --- Start Recording Rosbag file
+        location = os.path.dirname(os.getcwd())        
+        foldername = "/data/"
+        name = suction_experiment.experiment_type \
+                + "_#" + str(step) \
+                + "_pres_" + str(suction_experiment.pressureAtValve) \
+                + "_surface_" + suction_experiment.SURFACE \
+                + "_radius_" + str(suction_experiment.SPHERE_RADIUS)
+
+        filename = location + foldername + name    
+        command, rosbag_process = start_saving_rosbag(filename)     
+        print("Start recording Rosbag")
+        time.sleep(1)   
+
+        # # --- Move to Starting position
+        # print("Moving to starting position")
+        # suction_experiment.publish_event("Start")
+        # move1 = suction_experiment.go_to_starting_position()
+        # print("Move 1:", move1)
+        # time.sleep(0.01)
+
+        # # --- Add noise to the starting position                
+        # print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_z_command * 1000))
+        # suction_experiment.publish_event("Noise")
+        # time.sleep(0.001)
+        # move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
+        # print("Move 2:",move2)
+        # time.sleep(0.1)
+
+        # --- Apply vacuum
+        print("Applying vaccum")
+        suction_experiment.publish_event("Vacuum On")
+        time.sleep(0.001)
+        service_call("openValve")
+        time.sleep(0.1)
+
+        # # --- Approach the surface
+        # print("Approaching surface")
+        # suction_experiment.publish_event("Approach")
+        # time.sleep(0.001)
+        # move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+        # print("Move 3:",move3)
+
+        # Wait some time to have a steady state
+        suction_experiment.publish_event("Steady")
+        time.sleep(2)
+
+        # # --- Retrieve from surface
+        # print("Retreieving from surface")
+        # suction_experiment.publish_event("Retreive")
+        # time.sleep(0.001)
+        # move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+        # print("Move 4:",move4)
+        # time.sleep(0.1)
+
+        # --- Stop vacuum
+        print("Stop vacuum")
+        suction_experiment.publish_event("Vacuum Off")
+        time.sleep(0.001)
+        service_call("closeValve")
+        time.sleep(0.05)
+
+        # --- Stop recording
+        terminate_saving_rosbag(command, rosbag_process)
+        print("Stop recording Rosbag")
+        time.sleep(0.1) 
+
+        # ---- Ffinally save the metadata
+        suction_experiment.save_metadata(filename)
+        print("Saving Metadata")     
 
 
 class SuctionExperiment():
@@ -636,7 +728,7 @@ class SuctionExperiment():
         experiment_info = {
             "generalInfo": {
                 "date": str(datetime.datetime.now()),
-                "experimentType": "vertical"
+                "experimentType": self.experiment_type
             },
             "robotInfo": {
                 "robot": self.ROBOT_NAME,
@@ -686,12 +778,15 @@ def main():
 
     # Step 2: Get some info from the user
     print("\n\n ***** Suction Cups Experiments *****")
-    print("Type of Experiment (vertical or horizontal)")
+    print("Type of Experiment (vertical, horizontal or simple_suction)")
     experiment = ''
-    while ((experiment != "vertical") and (experiment != "horizontal")):
+    while ((experiment != "vertical") and (experiment != "horizontal") and (experiment != "simple_suction")):
         experiment = input()
         print(experiment)
     suction_experiment.experiment_type = str(experiment)
+
+    print("Type of Surface:")
+    suction_experiment.SURFACE = str(input())
 
     print("Pressure at the Valve [PSI]): ")
     suction_experiment.pressureAtValve = int(input())
@@ -706,6 +801,12 @@ def main():
         # Perform x noise experiment
         suction_experiment.experiment_type = "horizontal"
         x_noise_experiment(suction_experiment)    
+    
+    elif experiment == "simple_suction":
+        # Perform x noise experiment
+        suction_experiment.experiment_type = "simple_suction"
+        simple_cup_experiment(suction_experiment) 
+
 
 
 if __name__ == '__main__':
