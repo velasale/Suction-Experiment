@@ -765,21 +765,22 @@ def main():
 
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
-    suction_experiment.go_preliminary_position()
+    #suction_experiment.go_preliminary_position()
 
     # Step 2: Get some info from the user
     print("\n\n ***** Suction Cups Experiments *****")
-    print("Type of Experiment (vertical, horizontal or simple_suction)")
+    print("a. Type of Experiment (vertical, horizontal or simple_suction):")
     experiment = ''
     while ((experiment != "vertical") and (experiment != "horizontal") and (experiment != "simple_suction")):
         experiment = input()
         print(experiment)
     suction_experiment.experiment_type = str(experiment)
 
-    print("Type of Surface:")
+    print("b. Type of Surface:")
     suction_experiment.SURFACE = str(input())
 
-    print("Pressure at the Valve [PSI]): ")
+    print("c. Pressure at the Valve [PSI]): ")
+    print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
     suction_experiment.pressureAtValve = int(input())    
 
     # Step 3: Run the experiment
