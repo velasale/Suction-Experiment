@@ -402,6 +402,8 @@ class SuctionExperiment():
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
         self.step = 0
 
+    # Functions to move
+
     def go_preliminary_position(self):
         """ This function is to avoid the robot from travelling around weird points"""       
 
@@ -539,7 +541,7 @@ class SuctionExperiment():
         rate = rospy.Rate(10)
 
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
-
+        
         # --- Place a marker with text in RVIZ
         text = "Step No " + str(self.step) + "\nAdding cartesian noise"
         self.place_marker_text(0, 0, 1.5, 0.1, text)
@@ -585,6 +587,51 @@ class SuctionExperiment():
 
         return success
 
+    def move_in_z(self, z):
+
+        # --- Place a marker with text in RVIZ
+        text = "Moving in Z-Axis"
+        self.place_marker_text(0, 0, 1.5, 0.1, text)
+
+        # --- ROS tool for transformation across c-frames
+        tf_buffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tf_buffer)    
+
+        # ---- Step 1: Read the current pose in the planning frame
+        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
+        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
+        cur_pose_pframe.header.frame_id = self.planning_frame
+        cur_pose_pframe.header.stamp = rospy.Time(0)
+
+        # ---- Step 2: Transform current pose into the intutitive/easy frame and add noise
+        try: 
+            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, "sphere", rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        cur_pose_ezframe.pose.position.z += z
+        cur_pose_ezframe.header.stamp = rospy.Time(0)
+
+        # ---- Step 3: Transform again the goal pose into the planning frame
+        try: 
+            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            raise
+
+        # --- Step 4: Move to the new pose        
+        self.move_group.set_pose_target(goal_pose_pframe.pose)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
+
+        # --- Step 5: Compare poses
+        cur_pose = self.move_group.get_current_pose().pose
+        success = all_close(goal_pose_pframe.pose, cur_pose, 0.01)
+        
+        return success
+
+    # Additional functins
+       
     def place_marker_text(self, x, y, z, scale, text):
         """
     Creates a text as a Marker
@@ -638,50 +685,7 @@ class SuctionExperiment():
 
         # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
         rate = rospy.Rate(10)
-
-    def move_in_z(self, z):
-
-        # --- Place a marker with text in RVIZ
-        text = "Moving in Z-Axis"
-        self.place_marker_text(0, 0, 1.5, 0.1, text)
-
-        # --- ROS tool for transformation across c-frames
-        tf_buffer = tf2_ros.Buffer()
-        listener = tf2_ros.TransformListener(tf_buffer)    
-
-        # ---- Step 1: Read the current pose in the planning frame
-        cur_pose_pframe = tf2_geometry_msgs.PoseStamped()
-        cur_pose_pframe.pose = self.move_group.get_current_pose().pose
-        cur_pose_pframe.header.frame_id = self.planning_frame
-        cur_pose_pframe.header.stamp = rospy.Time(0)
-
-        # ---- Step 2: Transform current pose into the intutitive/easy frame and add noise
-        try: 
-            cur_pose_ezframe = tf_buffer.transform(cur_pose_pframe, "sphere", rospy.Duration(1))
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            raise
-
-        cur_pose_ezframe.pose.position.z += z
-        cur_pose_ezframe.header.stamp = rospy.Time(0)
-
-        # ---- Step 3: Transform again the goal pose into the planning frame
-        try: 
-            goal_pose_pframe = tf_buffer.transform(cur_pose_ezframe, self.planning_frame, rospy.Duration(1))
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            raise
-
-        # --- Step 4: Move to the new pose        
-        self.move_group.set_pose_target(goal_pose_pframe.pose)
-        plan = self.move_group.go(wait=True)
-        self.move_group.stop()
-        self.move_group.clear_pose_targets()
-
-        # --- Step 5: Compare poses
-        cur_pose = self.move_group.get_current_pose().pose
-        success = all_close(goal_pose_pframe.pose, cur_pose, 0.01)
-        
-        return success
-
+    
     def check_real_noise(self):
         """Get the real noise by comparing the star pose with the robot's current pose"""
 
