@@ -732,8 +732,8 @@ class SuctionExperiment():
             },
             "gripperInfo": {
                 "Suction Cup": self.SUCTION_CUP_NAME,
-                "pressureAtCompressor": self.pressureAtCompressor,
-                "pressureAtValve": self.pressureAtValve
+                "pressureAtCompressor [PSI]": self.pressureAtCompressor,
+                "pressureAtValve [PSI]": self.pressureAtValve
             },
             "surfaceInfo": {
                 "type": self.SURFACE,
