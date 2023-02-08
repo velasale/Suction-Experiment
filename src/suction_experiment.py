@@ -133,7 +133,7 @@ def z_noise_experiment(suction_experiment):
         # time.sleep(0.1)
 
         # --- Apply vacuum
-        print("Applying vaccum")
+        print("Applying vacuum")
         suction_experiment.publish_event("Vacuum On")
         service_call("openValve")
         # time.sleep(0.1)
@@ -216,7 +216,7 @@ def x_noise_experiment(suction_experiment):
         # time.sleep(0.1)
 
         # --- Apply vacuum
-        print("Applying vaccum")
+        print("Applying vacuum")
         suction_experiment.publish_event("Vacuum On")
         service_call("openValve")
         # time.sleep(0.1)
@@ -256,7 +256,7 @@ def x_noise_experiment(suction_experiment):
 
 def simple_cup_experiment(suction_experiment):   
 
-    steps = 1
+    steps = 5
     # noise = suction_experiment.SPHERE_RADIUS / steps
     noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
 
@@ -666,7 +666,7 @@ class SuctionExperiment():
 
         # Color, as an RGB triple, from 0 to 1.
         caption.color.r = 0
-        caption.color.g = 1
+        caption.color.g = 0
         caption.color.b = 0
         caption.color.a = 1
 
