@@ -96,6 +96,8 @@ def z_noise_experiment(suction_experiment):
     # Step 2: Add noise
     for step in range(steps):
 
+        suction_experiment.step = step
+
         print("\n **** Step %d of %d ****" %(step, steps))
 
         suction_experiment.noise_z_command = -1 * noise_res * step
@@ -354,8 +356,8 @@ class SuctionExperiment():
         move_group.set_end_effector_link("suction_cup")
 
         display_trajectory_publisher = rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
-        success_or_failure_publisher = rospy.Publisher('/success_or_failure', String, queue_size=20)
         event_publisher = rospy.Publisher('/experiment_steps', String, queue_size=20)
+        markerTextPublisher = rospy.Publisher('captions', Marker, queue_size=1000, latch=True)
 
         # ---- 2 - Display Basic Information in the command line
         planning_frame = move_group.get_planning_frame()
@@ -367,26 +369,17 @@ class SuctionExperiment():
         self.scene = scene
         self.move_group = move_group
         self.display_trajectory_publisher = display_trajectory_publisher
-        self.success_or_failure_publisher = success_or_failure_publisher
         self.event_publisher = event_publisher
         self.planning_frame = planning_frame
 
         ## Variables for the markers (sampling sphere, apple, ideal starting points)
-        self.marker_id = 1
-        self.proxy_markers = MarkerArray()
-        self.markerPublisher = rospy.Publisher('balloons', MarkerArray, queue_size=1000)
-        self.markerTextPublisher = rospy.Publisher('captions', Marker, queue_size=1000)
-        self.event_publisher = event_publisher
-
+        self.markerTextPublisher = markerTextPublisher
         wiper = Marker()
         wiper.id = 0
-        wiper.action = wiper.DELETEALL
-        self.proxy_markers.markers.append(wiper)
-        self.markerPublisher.publish(self.proxy_markers)
+        wiper.action = Marker.DELETEALL
         self.markerTextPublisher.publish(wiper)
-      
-        self.previous_pose = tf2_geometry_msgs.PoseStamped()
-        
+        self.event_publisher = event_publisher
+                      
         ## Experiment Parameters
         self.ROBOT_NAME = "ur5e"
         self.experiment_type = "vertical"
@@ -406,21 +399,16 @@ class SuctionExperiment():
         self.noise_x_command = 0
         self.noise_x_real = 0
         self.start_pose = tf2_geometry_msgs.PoseStamped()
+        self.previous_pose = tf2_geometry_msgs.PoseStamped()
+        self.step = 0
 
     def go_preliminary_position(self):
-        """ This function is to avoid the robot from travelling around weird points"""
-
-        # # Place a marker for the apple
-        # self.place_marker_sphere(1, 0, 0, 1.0, self.apple_pos_x, self.apple_pos_y, self.apple_pos_z, 0.08)
-        # # Place a marker for the sampling sphere
-        # self.place_marker_sphere(0, 1, 0, 0.2, self.apple_pos_x, self.apple_pos_y, self.apple_pos_z, self.sphereRadius * 2)
+        """ This function is to avoid the robot from travelling around weird points"""       
 
         # --- Place a marker with text in RVIZ
-        text = "Going to an Prelim Position"
+        text = "Going to an Preliminary Pose"
         self.place_marker_text(0, 0, 1.5, 0.1, text)
-
-        print("SHOULD APPEAR")
-
+        
         # --- Initiate object joint goal
         joint_goal = self.move_group.get_current_joint_values()
 
@@ -447,10 +435,10 @@ class SuctionExperiment():
         """ This function takes the gripper to the IDEAL starting position, before adding noise.
         * Places the gripper in a position on the surface of the sphere (center at the apple's)
         * Orients the gripper so that its Z-axis points towards the center of the apple.
-    """
+        """
 
         # --- Place a marker with text in RVIZ
-        text = "Going to an IDEAL Starting Position"
+        text = "Going to an IDEAL Starting Pose"
         self.place_marker_text(0, 0, 1.5, 0.1, text)
 
         # --- ROS tool for transformations among c-frames
@@ -496,7 +484,7 @@ class SuctionExperiment():
 
         return success
 
-    def place_marker_text(self, x, y, z, scale, text):
+
         """
     Creates a text as a Marker
     @ r,g,b: Indexes of the color in rgb format
@@ -530,8 +518,8 @@ class SuctionExperiment():
 
         # Color, as an RGB triple, from 0 to 1.
         caption.color.r = 0
-        caption.color.g = 1
-        caption.color.b = 0
+        caption.color.g = 0
+        caption.color.b = 1
         caption.color.a = 1
 
         caption.text = text
@@ -551,6 +539,10 @@ class SuctionExperiment():
         rate = rospy.Rate(10)
 
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
+
+        # --- Place a marker with text in RVIZ
+        text = "Step No " + str(self.step) + "\nAdding cartesian noise"
+        self.place_marker_text(0, 0, 1.5, 0.1, text)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -626,9 +618,9 @@ class SuctionExperiment():
         caption.scale.z = scale
 
         # Color, as an RGB triple, from 0 to 1.
-        caption.color.r = 1
+        caption.color.r = 0
         caption.color.g = 1
-        caption.color.b = 1
+        caption.color.b = 0
         caption.color.a = 1
 
         caption.text = text
@@ -648,6 +640,10 @@ class SuctionExperiment():
         rate = rospy.Rate(10)
 
     def move_in_z(self, z):
+
+        # --- Place a marker with text in RVIZ
+        text = "Moving in Z-Axis"
+        self.place_marker_text(0, 0, 1.5, 0.1, text)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -765,7 +761,7 @@ def main():
 
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
-    # suction_experiment.go_preliminary_position
+    suction_experiment.go_preliminary_position()
 
     # Step 2: Get some info from the user
     print("\n\n ***** Suction Cups Experiments *****")
@@ -780,7 +776,7 @@ def main():
     suction_experiment.SURFACE = str(input())
 
     print("Pressure at the Valve [PSI]): ")
-    suction_experiment.pressureAtValve = int(input())
+    suction_experiment.pressureAtValve = int(input())    
 
     # Step 3: Run the experiment
     if experiment == "vertical":
