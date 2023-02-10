@@ -171,21 +171,22 @@ def main():
     #max force during the retrieve
     #noises
 
+    id = 19
     # --- Step4: Plot
-    x = experiments[0].wrench_elapsed_time
-    y = experiments[0].wrench_zforce_values
-    x = experiments[0].pressure_elapsed_time
-    y = experiments[0].pressure_values
+    x = experiments[id].wrench_elapsed_time
+    y = experiments[id].wrench_zforce_values
+    x = experiments[id].pressure_elapsed_time
+    y = experiments[id].pressure_values
 
-    event_x = experiments[0].event_elapsed_time
-    event_y = experiments[0].event_values
+    event_x = experiments[id].event_elapsed_time
+    event_y = experiments[id].event_values
     plt.figure()
     plt.plot(x,y)
 
     # Add vertical lines at the events
     for event, label in zip(event_x, event_y):
         plt.axvline(x=event, color='red', linestyle='dotted', linewidth=2)
-        plt.text(event, 600, label, rotation=90)
+        plt.text(event, np.mean(y), label, rotation=90)
 
     # plt.ylim([0, 1200])
     plt.xlabel('elapsed time [s]')
