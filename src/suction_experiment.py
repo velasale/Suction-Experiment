@@ -390,7 +390,7 @@ class SuctionExperiment():
         self.SUCTION_CUP_SPEC = 0.0122
         self.SUCTION_CUP_RADIUS = 0.021 / 2
         self.OFFSET = 0.02
-        self.SPHERE_RADIUS = 0.075/2
+        self.SPHERE_RADIUS = 0.085/2
         self.SURFACE = "3DprintedPLA"
 
         ## Experiment Variables
@@ -455,7 +455,7 @@ class SuctionExperiment():
 
         goal_pose.pose.position.x = 0.115/2
         goal_pose.pose.position.y = 0.115/2
-        goal_pose.pose.position.z = - self.OFFSET
+        goal_pose.pose.position.z = - self.OFFSET - (self.SPHERE_RADIUS - 0.075/2)
        
         roll = 0
         pitch = 0
