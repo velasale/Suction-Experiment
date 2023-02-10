@@ -1,3 +1,4 @@
+import json
 import os
 import csv
 
@@ -6,51 +7,6 @@ from matplotlib import pyplot as plt
 import pandas as pd
 from bagpy import bagreader
 import numpy as np
-
-
-def elapsed_time(time_stamp, offset=0):
-    """
-    Simplifies the time axis, by subtracting the initial time.
-    This is useful because usually the time stamps are given in a long format (i.e. in the order of 1e9)
-    :param variable: Reference variable to obtain the size of the time array
-    :param time_stamp: The time stamp array that is going to be simplified
-    :return: Simplified time as Elapsed Time
-    """
-    elapsed = [None] * len(time_stamp)
-    for i in range(len(time_stamp)):
-        # elapsed[i] = time_stamp[i] - 1 * time_stamp[0] + offset
-        elapsed[i] = time_stamp[i]
-    return elapsed
-
-
-def bag_plot_wrench(data):
-
-    wrench_time_stamp = data.iloc[:, 0]
-    forces_x = data.iloc[:, 5]
-    forces_y = data.iloc[:, 6]
-    forces_z = data.iloc[:, 7]
-    torques_x = data.iloc[:, 8]
-    torques_y = data.iloc[:, 9]
-    torques_z = data.iloc[:, 10]
-
-    wrench_elapsed_time = elapsed_time(wrench_time_stamp)
-
-    return wrench_elapsed_time, forces_z
-
-
-class Experiment():
-    """This class is to define experiments as objects.
-    Each experiment has properties from the json file.
-
-    """
-    def __init__(self, exp_type="vertical",
-                 pressure=60,
-                 surface="3DPrinted_with_Primer",
-                 radius=37.5):
-        self.exp_type = exp_type
-        self.pressure = pressure
-        self.surface = surface
-        self.surface_radius = radius
 
 
 def bagfile_to_csvs(bagfile):
@@ -160,21 +116,166 @@ def bag_to_csvs():
                 # Once open, the data is saved automatically into a csv file
 
 
+def read_jsons(foldername=""):
+
+    location = os.path.dirname(os.getcwd())
+    experiments = []
+    id = 0
+    for file in os.listdir(location + foldername):
+        if file.endswith(".json"):
+            id += 1
+            json_file = open(location + foldername + file)
+            json_data = json.load(json_file)
+            experiment = Experiment(id)
+            experiment.exp_type = json_data["generalInfo"]["experimentType"]
+            try:
+                experiment.pressure = json_data["gripperInfo"]["pressureAtValve [PSI]"]
+            except KeyError:
+                experiment.pressure = json_data["gripperInfo"]["pressureAtValve"]
+
+            experiment.surface = json_data["surfaceInfo"]["type"]
+            experiment.file_source = file
+
+            # print(experiment.exp_type)
+            experiments.append(experiment)
+
+    return experiments
+
+
+def read_csvs(experiments, foldername=""):
+
+    for experiment in experiments:
+
+        filename = experiment.file_source
+        subfolder = filename.split('.json')[0]
+        # print(subfolder)
+        location = os.path.dirname(os.getcwd())
+        new_location = location + foldername + subfolder + "/"
+
+        # Sweep the csvs of each experiment
+        for file in os.listdir(new_location):
+            data_list = pd.read_csv(new_location + file)
+
+            if file == "gripper-pressure.csv":
+                experiment.pressure_time_stamp = data_list.iloc[:, 0]
+                experiment.pressure_values = data_list.iloc[:, 1]
+
+            if file == "rench.csv":
+                experiment.wrench_time_stamp = data_list.iloc[:, 0]
+                experiment.wrench_zforce_values = data_list.iloc[:, 7]
+
+            if file == "xperiment_steps.csv":
+                experiment.event_time_stamp = data_list.iloc[:, 0]
+                experiment.event_values = data_list.iloc[:, 1]
+
+        experiment.elapsed_times()
+
+    return experiments
+
+
+class Experiment():
+    """This class is to define experiments as objects.
+    Each experiment has properties from the json file.
+
+    """
+    def __init__(self, id=0,
+                 exp_type="vertical",
+                 pressure=60,
+                 surface="3DPrinted_with_Primer",
+                 radius=37.5,
+                 z_noise=0,
+                 x_noise=0,
+                 file_source=""):
+        self.exp_type = exp_type
+        self.pressure = pressure
+        self.surface = surface
+        self.surface_radius = radius
+        self.z_noise = z_noise
+        self.x_noise = x_noise
+        self.time_stamp = []
+        self.pressure_values = []
+        self.id = id
+        self.file_source = file_source
+
+        # Lists to save the data from csvs
+        self.pressure_time_stamp = []
+        self.pressure_elapsed_time = []
+        self.pressure_values = []
+        self.wrench_time_stamp = []
+        self.wrench_elapsed_time = []
+        self.wrench_zforce_values = []
+        self.event_time_stamp = []
+        self.event_elapsed_time = []
+        self.event_values = []
+        self.first_time_stamp = 0
+
+    def initial_stamp(self):
+        try:
+            self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp), min(self.event_time_stamp))
+        except ValueError:
+            self.first_time_stamp = 0
+
+    def elapsed_times(self):
+
+        # First Obtain the initial time stamp of the experiment as a reference to the rest
+        self.initial_stamp()
+
+        self.pressure_elapsed_time = [None] * len(self.pressure_time_stamp)
+        for i in range(len(self.pressure_time_stamp)):
+            self.pressure_elapsed_time[i] = self.pressure_time_stamp[i] - self.first_time_stamp
+
+        self.wrench_elapsed_time = [None] * len(self.wrench_time_stamp)
+        for i in range(len(self.wrench_time_stamp)):
+            self.wrench_elapsed_time[i] = self.wrench_time_stamp[i] - self.first_time_stamp
+
+        self.event_elapsed_time = [None] * len(self.event_time_stamp)
+        for i in range(len(self.event_time_stamp)):
+            self.event_elapsed_time[i] = self.event_time_stamp[i] - self.first_time_stamp
+
+    def vacuum_reached(self):
+        ...
+
+
 def main():
 
     # --- Read bagfile
-    # location = os.path.dirname(os.getcwd())
-    # foldername = "/data/simple_suction/"
-    # filename = "simple_suction_#0_pres_50_surface_Gloss_Fake_Apple_radius_0.0375.bag"
-    #
-    # # --- Step1: Convert bagfiles into pkl
-    # parara = bagfile_to_csvs(location+foldername+filename)
-    # plt.show()
+    foldername = "/data/data_1/"
 
     # --- Step1: Turn Bag into csvs if needed
-    bag_to_csvs()
+    # bag_to_csvs(foldername)
 
-    # --- Step2:
+    # --- Step2: Read attributes from json files
+    metadata = read_jsons(foldername)
+
+    # --- Step3: Read values from the csv files for each json file
+    experiments = read_csvs(metadata, foldername)
+
+    # --- Step4: Get different properties from each experiment
+    #mean value of vacuum during steady state
+
+
+    # --- Step4: Plot
+    x = experiments[0].wrench_elapsed_time
+    y = experiments[0].wrench_zforce_values
+    x = experiments[0].pressure_elapsed_time
+    y = experiments[0].pressure_values
+
+    event_x = experiments[0].event_elapsed_time
+    event_y = experiments[0].event_values
+    plt.figure()
+    plt.plot(x,y)
+
+    # Add vertical lines at the events
+    for event, label in zip(event_x, event_y):
+        plt.axvline(x=event, color='red', linestyle='dotted', linewidth=2)
+        plt.text(event, 600, label, rotation=90)
+
+    # plt.ylim([0, 1200])
+    plt.xlabel('elapsed time [s]')
+    plt.title(experiments[0].file_source)
+    plt.grid()
+    plt.show()
+
 
 if __name__ == '__main__':
     main()
