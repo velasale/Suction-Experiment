@@ -9,91 +9,6 @@ from bagpy import bagreader
 import numpy as np
 
 
-def bagfile_to_csvs(bagfile):
-    """
-    Reads a bagfile and extracts topics into dictionaries
-    """
-
-    bag = bagreader(bagfile)
-
-    # --- Read the times when events where triggered ---
-    data = bag.message_by_topic("experiment_steps")
-    data_list = pd.read_csv(data)
-
-    # Extract x-axis, usually time
-    events_time_stamp = data_list.iloc[:, 0]
-    events_time = elapsed_time(events_time_stamp)
-
-    event_values = data_list.iloc[:, 1]
-
-    print(event_values)
-    print(events_time)
-    print(events_time_stamp)
-
-    # --- Get the topics available in the bagfile
-    " print the list of topics"
-    topics = bag.topic_table
-    print("Bagfile topics:\n", topics)
-
-    # --- Sweep all topics, plot and add the events
-    for topic, topic_type in zip(topics['Topics'], topics['Types']):
-
-        # Skip images
-        if topic_type == "sensor_msgs/Image" or topic == "experiment_steps":
-            pass
-        else:
-            print("\n", topic)
-            data = bag.message_by_topic(topic)
-            data_list = pd.read_csv(data)
-
-            # Check how many values per topic
-            print(data_list.shape)
-
-            if topic == "wrench":
-                time, force = bag_plot_wrench(data_list)
-                plt.figure()
-                plt.plot(time, force)
-
-                # Add vertical lines at the events
-                for event, label in zip(events_time, event_values):
-                    plt.axvline(x=event, color='red', linestyle='dotted', linewidth=2)
-                    plt.text(event, 0, label, rotation=90)
-
-                plt.ylim([-22, 10])
-
-                plt.xlabel('elapsed time [s]')
-                plt.ylabel(topic)
-                plt.title(bagfile)
-                plt.grid()
-
-            elif topic == "joint_states":
-                pass
-            else:
-                # Extract x-axis, usually time
-                time_stamp = data_list.iloc[:, 0]
-                elapsed = elapsed_time(time_stamp)
-                values = data_list.iloc[:, 1]
-
-                plt.figure()
-                # plt.plot(elapsed, values)
-                plt.plot(time_stamp, values)
-
-                # Add vertical lines at the events
-                for event, label in zip(events_time_stamp, event_values):
-                    plt.axvline(x=event, color='red', linestyle='dotted', linewidth=2)
-                    plt.text(event, 600, label, rotation=90)
-
-                plt.ylim([0, 1200])
-                plt.xlabel('elapsed time [s]')
-                plt.ylabel(topic)
-                plt.title(bagfile)
-                plt.grid()
-
-        dictios = 0
-
-    return dictios
-
-
 def bag_to_csvs():
     """Method to open all the bagfiles in a folder and save all topics as csvs"""
 
@@ -232,7 +147,7 @@ class Experiment():
         for i in range(len(self.event_time_stamp)):
             self.event_elapsed_time[i] = self.event_time_stamp[i] - self.first_time_stamp
 
-    def vacuum_reached(self):
+    def steady_vacuum(self):
         ...
 
 
@@ -252,7 +167,9 @@ def main():
 
     # --- Step4: Get different properties from each experiment
     #mean value of vacuum during steady state
-
+    #also get those experiments that had everything the same ... to average them
+    #max force during the retrieve
+    #noises
 
     # --- Step4: Plot
     x = experiments[0].wrench_elapsed_time
