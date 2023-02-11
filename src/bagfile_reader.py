@@ -211,14 +211,20 @@ def main():
     plt.figure()
     pressures = [50, 60, 70, 80]
 
+    # Conditions for the plot
+    # radius = 0.0425
+    radius = 0.0375
+    # pressure = 80
+
     for pressure in pressures:
 
         list_of_means = []
         list_of_stds = []
         list_of_x_noises = []
+        list_of_z_noises = []
         for i in range(3):
 
-            foldername = "/data/x_noise/rep" + str(i+1) + "/"
+            foldername = "/data/z_noise/rep" + str(i+1) + "/"
 
             # --- Step1: Turn Bag into csvs if needed
             # bag_to_csvs(foldername)
@@ -235,11 +241,8 @@ def main():
             # TODO mind about the initial atmospheric pressure
             # TODO mind about the initial weight measurement
 
-            # Conditions for the plot
-            radius = 0.0375
-            # pressure = 80
-
             x_noises = []
+            z_noises = []
             vacuum_means = []
             vacuum_stds = []
 
@@ -261,12 +264,14 @@ def main():
                     # print(x_noise, z_noise)
 
                     x_noises.append(x_noise)
+                    z_noises.append(z_noise)
                     vacuum_means.append(steady_vacuum_mean)
                     vacuum_stds.append(steady_vacuum_std)
 
             list_of_means.append(vacuum_means)
             list_of_stds.append(vacuum_stds)
             list_of_x_noises.append(x_noises)
+            list_of_z_noises.append(z_noises)
 
         print("\nMeans: %.2f", list_of_means)
         print("Stds: %.2f", list_of_stds)
@@ -276,17 +281,21 @@ def main():
         final_means = []
         final_stds = []
         final_x_noises = []
+        final_z_noises = []
         for j in range(10):
             mean_vals = []
             std_vals = []
             x_noises_vals = []
+            z_noises_vals = []
             for i in range(3):
                 mean_vals.append(list_of_means[i][j])
                 std_vals.append(list_of_stds[i][j])
                 x_noises_vals.append(list_of_x_noises[i][j])
+                z_noises_vals.append(list_of_z_noises[i][j])
             # print(vals)
             final_means.append(np.mean(mean_vals))
             final_x_noises.append(np.mean(x_noises_vals))
+            final_z_noises.append(np.mean(z_noises_vals))
             # Mean of standards
             a = std_vals[0]
             b = std_vals[1]
@@ -297,13 +306,19 @@ def main():
         print(final_means)
         print(final_stds)
         print(final_x_noises)
+        print(final_z_noises)
 
-        plt.errorbar(final_x_noises, final_means, final_stds, label=(str(pressure)+" PSI"))
-        plt.xlabel("x-noise [m]")
-        plt.ylabel("Vacuum [hPa]")
-        plt.legend()
+        # plt.errorbar(final_x_noises, final_means, final_stds, label=(str(pressure)+" PSI"))
+        plt.errorbar(final_z_noises, final_means, final_stds, label=(str(pressure) + " PSI"))
 
+    title = "Cartesian noise in z, for %.4f radius" % (radius)
+    plt.xlabel("z-noise [m]")
+    plt.ylabel("Vacuum [hPa]")
+    plt.ylim([100, 1100])
+    plt.xlim([0, 0.030])
+    plt.legend()
     plt.grid()
+    plt.title(title)
     plt.show()
 
         #     # --- Step4: Plot
