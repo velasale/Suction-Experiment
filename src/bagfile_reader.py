@@ -9,52 +9,59 @@ from bagpy import bagreader
 import numpy as np
 
 
-def bag_to_csvs(foldername):
-    """Method to open all the bagfiles in a folder and save all topics as csvs"""
+def bag_to_csvs(folder):
+    """Open all bagfiles in a folder and saves all topics as csvs"""
 
     location = os.path.dirname(os.getcwd())
 
-    for file in os.listdir(location + foldername):
+    for file in os.listdir(location + folder):
         if file.endswith(".bag"):
-            bag = bagreader(location + foldername + file)
+            bag = bagreader(location + folder + file)
             # print("\n\n", file)
 
-            # --- Get the topics available in the bagfile
+            # --- Get the topics available in the bagfile ---
             topics = bag.topic_table
             # print("Bagfile topics:\n", topics)
 
-            # --- Read the desired topic
+            # --- Read the desired topic ---
             for topic in topics["Topics"]:
                 data = bag.message_by_topic(topic)
 
-                # Once open, the data is saved automatically into a csv file
+                # Once opened, data is saved automatically into a csv file.
 
 
-def read_jsons(foldername=""):
+def read_jsons(folder=""):
+    """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
+    attributes to each one of them"""
 
     location = os.path.dirname(os.getcwd())
     experiments = []
     id = 0
-    for file in sorted(os.listdir(location + foldername)):
+    for file in sorted(os.listdir(location + folder)):
         if file.endswith(".json"):
             id += 1
-            json_file = open(location + foldername + file)
+            json_file = open(location + folder + file)
             json_data = json.load(json_file)
+
+            # Create Experiment as Object
             experiment = Experiment(id)
+
+            # Add metadata as attributes
+            experiment.file_source = file
             experiment.exp_type = json_data["generalInfo"]["experimentType"]
+            experiment.surface = json_data["surfaceInfo"]["type"]
+
+            experiment.x_noise = abs(json_data["robotInfo"]["x noise real [m]"])
+            experiment.z_noise = abs(json_data["robotInfo"]["z noise real [m]"])
+
             try:
                 experiment.pressure = json_data["gripperInfo"]["pressureAtValve [PSI]"]
             except KeyError:
                 experiment.pressure = json_data["gripperInfo"]["pressureAtValve"]
-
-            experiment.surface = json_data["surfaceInfo"]["type"]
             try:
                 experiment.surface_radius = json_data["surfaceInfo"]["radius [m]"]
             except KeyError:
                 experiment.surface_radius = json_data["surfaceInfo"]["radius"]
-            experiment.file_source = file
-            experiment.x_noise = abs(json_data["robotInfo"]["x noise real [m]"])
-            experiment.z_noise = abs(json_data["robotInfo"]["z noise real [m]"])
 
             # print(experiment.exp_type)
             experiments.append(experiment)
@@ -62,7 +69,8 @@ def read_jsons(foldername=""):
     return experiments
 
 
-def read_csvs(experiments, foldername=""):
+def read_csvs(experiments, folder=""):
+    """Opens the csvs associated to each experiment and saves it as lists"""
 
     for experiment in experiments:
 
@@ -70,7 +78,7 @@ def read_csvs(experiments, foldername=""):
         subfolder = filename.split('.json')[0]
         # print(subfolder)
         location = os.path.dirname(os.getcwd())
-        new_location = location + foldername + subfolder + "/"
+        new_location = location + folder + subfolder + "/"
 
         # Sweep the csvs of each experiment
         for file in sorted(os.listdir(new_location)):
@@ -94,7 +102,7 @@ def read_csvs(experiments, foldername=""):
 
 
 class Experiment():
-    """This class is to define experiments as objects.
+    """Class to define experiments as objects.
     Each experiment has properties from the json file.
 
     """
@@ -107,7 +115,9 @@ class Experiment():
                  x_noise=0,
                  file_source=""):
 
-        # Experiment initial attributes
+        self.id = id
+
+        # Data from jsons
         self.exp_type = exp_type
         self.pressure = pressure
         self.surface = surface
@@ -116,19 +126,21 @@ class Experiment():
         self.x_noise = x_noise
         self.time_stamp = []
         self.pressure_values = []
-        self.id = id
         self.file_source = file_source
 
-        # Lists to save the data from csvs
+        # Data from csvs
         self.pressure_time_stamp = []
         self.pressure_elapsed_time = []
         self.pressure_values = []
+
         self.wrench_time_stamp = []
         self.wrench_elapsed_time = []
         self.wrench_zforce_values = []
+
         self.event_time_stamp = []
         self.event_elapsed_time = []
         self.event_values = []
+
         self.first_time_stamp = 0
         self.atmospheric_pressure = 0
         self.testrig_weight = 0
@@ -139,13 +151,24 @@ class Experiment():
         self.steady_vacuum_std = 0
         self.max_detach_zforce = 0
 
+    def get_atmospheric_pressure(self):
+        """Takes initial and last reading as the atmospheric pressure.
+        Both are taken because in some cases the valve was already on, hence the last one (after valve is off) is also checked
+        """
+        first_reading = self.pressure_values[0]
+        last_reading = self.pressure_values[1]
+
+        self.atmospheric_pressure = max(first_reading, last_reading)
+
     def initial_stamp(self):
+        """Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
         try:
             self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp), min(self.event_time_stamp))
         except ValueError:
             self.first_time_stamp = 0
 
     def elapsed_times(self):
+        """Subtracts the initial stamp from all the time-stamps to improve readability"""
 
         # First Obtain the initial time stamp of the experiment as a reference to the rest
         self.initial_stamp()
@@ -209,12 +232,14 @@ class Experiment():
 def main():
 
     plt.figure()
-    pressures = [50, 60, 70, 80]
 
-    # Conditions for the plot
+    # --- Conditions for the plot ---
     # radius = 0.0425
     radius = 0.0375
     # pressure = 80
+    # pressures = [50, 60, 70, 80]
+    pressures = [50]
+
 
     for pressure in pressures:
 
@@ -222,18 +247,21 @@ def main():
         list_of_stds = []
         list_of_x_noises = []
         list_of_z_noises = []
+
+        # --- Step 1: Read Data from jsons and csvs and create a list with all the experiments
         for i in range(3):
 
-            foldername = "/data/z_noise/rep" + str(i+1) + "/"
+            folder = "/data/z_noise/rep" + str(i+1) + "/"
 
-            # --- Step1: Turn Bag into csvs if needed
-            # bag_to_csvs(foldername)
+            # --- Step1: Turn Bag into csvs if needed ---
+            # Comment if it is already done
+            # bag_to_csvs(folder)
 
             # --- Step2: Read attributes from json files
-            metadata = read_jsons(foldername)
+            metadata = read_jsons(folder)
 
             # --- Step3: Read values from the csv files for each json file
-            experiments = read_csvs(metadata, foldername)
+            experiments = read_csvs(metadata, folder)
 
             # --- Step4: Get different properties from each experiment
             # TODO Fix why is the std so small
@@ -259,9 +287,9 @@ def main():
                     steady_vacuum_mean = experiment.steady_vacuum_mean
                     steady_vacuum_std = experiment.steady_vacuum_std
 
-                    # print(experiment.file_source)
-                    # print(steady_vacuum_mean, steady_vacuum_std)
-                    # print(x_noise, z_noise)
+                    print(experiment.file_source)
+                    print(steady_vacuum_mean, steady_vacuum_std)
+                    print(x_noise, z_noise)
 
                     x_noises.append(x_noise)
                     z_noises.append(z_noise)
@@ -277,17 +305,21 @@ def main():
         print("Stds: %.2f", list_of_stds)
         print("x-noises: ", list_of_x_noises)
 
-        # Elaborate the final means
+        # --- Step 2: Get the mean values for the 3 repetitions of each experiment
         final_means = []
         final_stds = []
         final_x_noises = []
         final_z_noises = []
-        for j in range(10):
+
+        n_noises = 10
+        n_reps = 3
+
+        for j in range(n_noises):
             mean_vals = []
             std_vals = []
             x_noises_vals = []
             z_noises_vals = []
-            for i in range(3):
+            for i in range(n_reps):
                 mean_vals.append(list_of_means[i][j])
                 std_vals.append(list_of_stds[i][j])
                 x_noises_vals.append(list_of_x_noises[i][j])
@@ -296,11 +328,11 @@ def main():
             final_means.append(np.mean(mean_vals))
             final_x_noises.append(np.mean(x_noises_vals))
             final_z_noises.append(np.mean(z_noises_vals))
-            # Mean of standards
-            a = std_vals[0]
-            b = std_vals[1]
-            c = std_vals[2]
-            mean_stds = ((a ** 2 + b ** 2 + c ** 2) / 3) ** 0.5
+            # Mean of standard deviations
+            mean_stds = 0
+            for i in range(n_reps):
+                mean_stds += std_vals[i] ** 2
+            mean_stds = (mean_stds / n_reps) ** 0.5
             final_stds.append(mean_stds)
 
         print(final_means)
