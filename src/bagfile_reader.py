@@ -286,7 +286,6 @@ class Experiment():
         axis[0].set_title(self.filename)
 
 
-
 def main():
 
     plt.figure()
@@ -367,6 +366,8 @@ def main():
 
                 # --- Step4: Get different properties from each experiment
                 # TODO Fix why is the std so small
+                # TODO Finish the method to check for errors, and have the error as text in the plot
+                # TODO simplify main()
 
                 experiment.get_steady_vacuum()
                 experiment.get_relative_zforces()
@@ -458,8 +459,6 @@ def main():
     plt.grid()
     plt.title(title)
     plt.show()
-
-
 
 
 if __name__ == '__main__':
