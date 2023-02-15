@@ -80,8 +80,6 @@ def read_csvs(experiment, folder):
             experiment.event_time_stamp = data_list.iloc[:, 0].tolist()
             experiment.event_values = data_list.iloc[:, 1].tolist()
 
-    experiment.elapsed_times()
-
     return experiment
 
 
@@ -129,7 +127,6 @@ class Experiment():
 
         self.first_time_stamp = 0
         self.atmospheric_pressure = 0
-        self.testrig_weight = 0
         self.errors = []
 
         # Statistical Features
@@ -138,24 +135,20 @@ class Experiment():
         self.steady_vacuum_std = 0
         self.max_detach_zforce = 0
 
-    def get_atmospheric_pressure(self):
-        """Takes initial and last reading as the atmospheric pressure.
-        Both are taken because in some cases the valve was already on, hence the last one (after valve is off) is also checked
-        """
-        first_reading = self.pressure_values[0]
-        last_reading = self.pressure_values[1]
-
-        self.atmospheric_pressure = max(first_reading, last_reading)
-
-    def get_testrig_weight(self):
-        """Takes an initial reading of z-force, which is caused by the weight of the test rig"""
-
-        self.testrig_weight = self.wrench_zforce_values[0]
+    def get_features(self):
+        """Basically run all the methods"""
+        self.elapsed_times()
+        self.get_atmospheric_pressure()
+        self.get_steady_vacuum()
+        self.get_relative_zforces()
+        self.get_detach_force()
+        self.check_errors()
 
     def initial_stamp(self):
         """Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
         try:
-            self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp), min(self.event_time_stamp))
+            self.first_time_stamp = min(min(self.pressure_time_stamp), min(self.wrench_time_stamp),
+                                        min(self.event_time_stamp))
         except ValueError:
             self.first_time_stamp = 0
 
@@ -177,11 +170,17 @@ class Experiment():
         for i in range(len(self.event_time_stamp)):
             self.event_elapsed_time[i] = self.event_time_stamp[i] - self.first_time_stamp
 
+    def get_atmospheric_pressure(self):
+        """Takes initial and last reading as the atmospheric pressure.
+        Both are taken because in some cases the valve was already on, hence the last one (after valve is off) is also checked
+        """
+        first_reading = self.pressure_values[0]
+        last_reading = self.pressure_values[1]
+
+        self.atmospheric_pressure = max(first_reading, last_reading)
+
     def get_steady_vacuum(self):
         """Method to obtain the mean and std deviation of the vacuum during steady state"""
-
-        # Read the initial pressure value which is the atmospheric pressure
-        self.get_atmospheric_pressure()
 
         # Get the index at which the steady state starts and ends
         start_index = self.event_values.index('Steady')
@@ -243,17 +242,76 @@ class Experiment():
         - suction cup collapsed in the air, and therefore showed some vacuum
         """
 
-        # Type 1: When robot didn't move after retrieve command, then vacuum kept high right before turning valve off
-        threshold = 900
-        index = self.event_values.index("Vacuum Off")
-        time_at_index = self.event_elapsed_time[index]
+        # 1. Cases due to the arm movement solver:
+
+        # 1.1. When arm didnt retrieve, force and vacuum remain constant before and after retrieve event. Hence you dont
+        # see much change in the zforce
+        force_range = 1
+        p_threshold = 800
+        p_range = 50
+        retrieve_index = self.event_values.index("Retrieve")
+        time_at_index = self.event_elapsed_time[retrieve_index]
+        for time, value in zip(self.wrench_elapsed_time, self.wrench_zforce_relative_values):
+            if time > time_at_index:
+                force_at_retrieve = value
+                break
+            else:
+                force_at_retrieve = 0
         for time, value in zip(self.pressure_elapsed_time, self.pressure_values):
             if time > time_at_index:
-                if value < threshold:
-                    self.errors.append("Didn't move")
+                pressure_at_retrieve = value
                 break
 
-        # Type 2:
+        vacuum_off_index = self.event_values.index("Vacuum Off")
+        time_at_index = self.event_elapsed_time[vacuum_off_index]
+        for time, value in zip(self.wrench_elapsed_time, self.wrench_zforce_relative_values):
+            if time > time_at_index:
+                force_at_vacuum_off = value
+                break
+            else:
+                force_at_vacuum_off = 0
+        for time, value in zip(self.pressure_elapsed_time, self.pressure_values):
+            if time > time_at_index:
+                pressure_at_vacuum_off = value
+                break
+
+        if (abs(force_at_retrieve - force_at_vacuum_off) < force_range) and pressure_at_retrieve < p_threshold and abs(pressure_at_vacuum_off - pressure_at_retrieve) < p_range:
+            print("Error ", force_at_retrieve, force_at_vacuum_off)
+            self.errors.append("Arm didn't move after Retrieve")
+
+        if self.exp_type == "vertical" and self.z_noise < 0.01 and pressure_at_retrieve > 900:
+            self.errors.append("Arm didn't move after Retrieve")
+
+        if self.exp_type == "horizontal" and self.x_noise < 0.02 and pressure_at_retrieve > 900:
+            self.errors.append("Arm didn't move after Retrieve")
+
+        # 1.2.When for some reason, one topic stopped from being recorded. Hence, the total elapsed time is different
+        time_range = 1
+        force_time = self.wrench_elapsed_time[-1] - self.wrench_elapsed_time[0]
+        pressure_time = self.pressure_elapsed_time[-1] - self.pressure_elapsed_time[0]
+
+        if abs(force_time - pressure_time) > time_range:
+            self.errors.append("One of the topics wasn't recorded properly")
+
+        # 2. Cases due to the suction cup:
+        # 2.1. When suction cup collapses. This shows an increase in vacuum after retrieving
+        pressure_range = 50
+        retrieve_index = self.event_values.index("Retrieve")
+        time_at_index = self.event_elapsed_time[retrieve_index]
+        for time, value in zip(self.pressure_elapsed_time, self.pressure_values):
+            if time > time_at_index:
+                pressure_at_retrieve = value
+                break
+
+        vacuum_off_index = self.event_values.index("Vacuum Off")
+        time_at_index = self.event_elapsed_time[vacuum_off_index]
+        for time, value in zip(self.pressure_elapsed_time, self.pressure_values):
+            if time > time_at_index:
+                pressure_at_vacuum_off = value
+                break
+
+        if (pressure_at_retrieve - pressure_at_vacuum_off) > pressure_range:
+            self.errors.append("Cup collapsed after retrieve")
 
     def plots_stuff(self):
 
@@ -283,49 +341,58 @@ class Experiment():
         axis[1].grid()
         axis[1].set_ylabel("Pressure [hPa]")
         plt.xlabel('elapsed time [s]')
-        axis[0].set_title(self.filename)
+        try:
+            error_type = self.errors[0]
+        except IndexError:
+            error_type = "good data"
+        axis[0].set_title(self.filename + "\n" + error_type)
 
 
 def main():
 
+    # TODO Point in the plots the location of max values
+    # TODO PLot xForces
+    # TODO Plot Moments
+    # TODO PLots for different surface finishes - other experiment
+    #
+
     plt.figure()
 
-    # exp_type = "vertical"
-    exp_type = "horizontal"
+    exp_type = "vertical"
+    # exp_type = "horizontal"
 
     # --- Controlled variables ---
     radius = 0.0425
     # radius = 0.0375
     pressures = [50, 60, 70, 80]
     # pressures = [60, 70]
-    pressures = [50]
+    # pressures = [80]
     n_noises = 10
     n_reps = 3
 
-    # Sweep all the pressures
+    # --- Sweep all the pressures ---
     for pressure in pressures:
 
-        list_of_means = []
-        list_of_stds = []
-        list_of_x_noises = []
-        list_of_z_noises = []
-        list_of_zforce_means = []
-        list_of_zforce_stds = []
+        noises_vacuum_means = []
+        noises_vacuum_stds = []
+        noises_xnoises = []
+        noises_znoises = []
+        noises_zforce_means = []
+        noises_zforce_stds = []
 
-        # Sweep all the noises
+        # --- Sweep all the noises ---
         for noise in range(n_noises):
 
-            x_noises = []
-            z_noises = []
-            vacuum_means = []
-            vacuum_stds = []
-            max_z_forces = []
+            reps_xnoises = []
+            reps_znoises = []
+            reps_vacuum_means = []
+            reps_vacuum_stds = []
+            reps_zforce_max = []
 
-            # Sweep all repetitions
-            # for rep in range(n_reps):
+            # --- Sweep all repetitions ---
             for rep in range(n_reps):
 
-                # Build the name of the experiment
+                # A. Build the name of the experiment
                 location = os.path.dirname(os.getcwd())
                 if exp_type == "horizontal":
                     folder = "/data/x_noise/rep" + str(rep+1) + "/"
@@ -342,6 +409,7 @@ def main():
 
                 file_path = location + folder
 
+                # B. Look for the file
                 for f in os.listdir(file_path):
                     if re.match(filename, f) and f.endswith(".bag"):
                         only_filename = f.split(".bag")[0]
@@ -353,107 +421,71 @@ def main():
                 if only_filename == "no_match":
                     break
 
-                # --- Step1: Turn Bag into csvs if needed ---
+                # C. Turn Bag into csvs if needed
                 # Comment if it is already done
                 # bag_to_csvs(file_path + only_filename + ".bag")
 
-                # --- Step2: Read attributes from json files
+                # D. Read attributes from 'json' files
                 metadata = read_json(file_path + only_filename + ".json")
 
-                # --- Step3: Read values from the csv files for each json file
+                # E. Read values from 'csv' files for each 'json' file
                 experiment = read_csvs(metadata, (file_path + only_filename))
                 experiment.filename = only_filename
 
-                # --- Step4: Get different properties from each experiment
-                # TODO Fix why is the std so small
-                # TODO Finish the method to check for errors, and have the error as text in the plot
-                # TODO simplify main()
-
-                experiment.get_steady_vacuum()
-                experiment.get_relative_zforces()
-                max_force = experiment.get_detach_force()
-
+                # F. Get different properties for each experiment
+                experiment.get_features()
                 # plt.close('all')
-                experiment.plots_stuff()
-                plt.show()
+                # experiment.plots_stuff()
+                # plt.show()
 
-                if max_force == "error":
+                # G. Check if there were any errors during the experiment
+                if len(experiment.errors) > 0:
                     break
 
-                x_noise = experiment.x_noise
-                z_noise = experiment.z_noise
+                # H. Gather features from all the repetitions of the experiment
+                reps_xnoises.append(experiment.x_noise)
+                reps_znoises.append(experiment.z_noise)
+                reps_vacuum_means.append(round(experiment.steady_vacuum_mean, 2))
+                reps_vacuum_stds.append(round(experiment.steady_vacuum_std, 4))
+                reps_zforce_max.append(experiment.max_detach_zforce)
 
-                steady_vacuum_mean = round(experiment.steady_vacuum_mean, 2)
-                steady_vacuum_std = round(experiment.steady_vacuum_std, 4)
-                detach_force = round(experiment.max_detach_zforce)
-
-                # A few exceptions due to some errors during the experiment (e.g. arm didn't move, or cup collapsed)
-                if steady_vacuum_mean > -200 and z_noise < 0.02 and exp_type == "vertical":
-                    print("**** There was an issue during the experiment and this point should be tossed away***")
-                    print(steady_vacuum_mean, steady_vacuum_std)
-                    print(x_noise, z_noise)
-                    break
-                if steady_vacuum_mean < -400 and x_noise > 0.027 and exp_type == "horizontal":
-                    print("**** There was an issue during the experiment and this point should be tossed away***")
-                    print(steady_vacuum_mean, steady_vacuum_std)
-                    print(x_noise, z_noise)
-                    break
-                if steady_vacuum_mean > -200 and x_noise < 0.025 and exp_type == "horizontal":
-                    print("**** There was an issue during the experiment and this point should be tossed away***")
-                    print(steady_vacuum_mean, steady_vacuum_std)
-                    print(x_noise, z_noise)
-                    break
-
-                x_noises.append(x_noise)
-                z_noises.append(z_noise)
-                vacuum_means.append(steady_vacuum_mean)
-                vacuum_stds.append(steady_vacuum_std)
-                max_z_forces.append(detach_force)
-
-            # --- Step2: Once all values are gathered for all repetitions, obtain the mean values
-            if len(vacuum_means) == 0:
+            # --- Once all values are gathered for all repetitions, obtain the mean values
+            if len(reps_vacuum_means) == 0:
                 break
-
-            final_vacuum_mean = np.mean(vacuum_means)
-            final_x_noise = np.mean(x_noises)
-            final_z_noise = np.mean(z_noises)
-            final_zforce_mean = np.mean(max_z_forces)
-            final_zforce_std = np.std(max_z_forces)
+            final_x_noise = np.mean(reps_xnoises)
+            final_z_noise = np.mean(reps_znoises)
+            final_vacuum_mean = np.mean(reps_vacuum_means)
+            final_zforce_mean = np.mean(reps_zforce_max)
+            final_zforce_std = np.std(reps_zforce_max)
 
             mean_stds = 0
-            for i in range(len(vacuum_stds)):
-                mean_stds += vacuum_stds[i] ** 2
-            final_vacuum_std = (mean_stds / len(vacuum_stds)) ** 0.5
+            for i in range(len(reps_vacuum_stds)):
+                mean_stds += reps_vacuum_stds[i] ** 2
+            final_vacuum_std = (mean_stds / len(reps_vacuum_stds)) ** 0.5
 
-            list_of_means.append(round(final_vacuum_mean, 2))
-            list_of_stds.append(round(final_vacuum_std, 2))
-            list_of_x_noises.append(round(final_x_noise, 4))
-            list_of_z_noises.append(round(final_z_noise, 4))
-            list_of_zforce_means.append(round(final_zforce_mean, 2))
-            list_of_zforce_stds.append(round(final_zforce_std, 2))
+            noises_vacuum_means.append(round(final_vacuum_mean, 2))
+            noises_vacuum_stds.append(round(final_vacuum_std, 2))
+            noises_xnoises.append(round(final_x_noise, 4))
+            noises_znoises.append(round(final_z_noise, 4))
+            noises_zforce_means.append(round(final_zforce_mean, 2))
+            noises_zforce_stds.append(round(final_zforce_std, 2))
 
-        # check
-        print("\nVacuum Means: ", list_of_means)
-        print("Vacuum Stds: ", list_of_stds)
-        print("x-noises: ", list_of_x_noises)
-        print("zforce Means: ", list_of_zforce_means)
-        print("zforce Stds: ", list_of_zforce_stds)
-
+        # --- Once all values are collected for all noises, print and plot
         if exp_type == "horizontal":
-            # plt.errorbar(list_of_x_noises, list_of_means, list_of_stds, label=(str(pressure) + " PSI"))
-            plt.errorbar(list_of_x_noises, list_of_zforce_means, list_of_zforce_stds, label=(str(pressure) + " PSI"))
+            plt.errorbar(noises_xnoises, noises_vacuum_means, noises_vacuum_stds, label=(str(pressure) + " PSI"))
+            # plt.errorbar(noises_xnoises, noises_zforce_means, noises_zforce_stds, label=(str(pressure) + " PSI"))
             title = "Cartesian noise in x, for %.4f radius" % (radius)
             plt.xlabel("x-noise [m]")
         elif exp_type == "vertical":
-            # plt.errorbar(list_of_z_noises, list_of_means, list_of_stds, label=(str(pressure) + " PSI"))
-            plt.errorbar(list_of_z_noises, list_of_zforce_means, list_of_zforce_stds, label=(str(pressure) + " PSI"))
+            plt.errorbar(noises_znoises, noises_vacuum_means, noises_vacuum_stds, label=(str(pressure) + " PSI"))
+            # plt.errorbar(noises_znoises, noises_zforce_means, noises_zforce_stds, label=(str(pressure) + " PSI"))
             title = "Cartesian noise in z, for %.4f radius" % (radius)
             plt.xlabel("z-noise [m]")
 
-    # plt.ylabel("Vacuum [hPa]")
-    # plt.ylim([-1000, 0])
-    plt.ylabel("Force [N]")
-    plt.ylim([-2, 7])
+    plt.ylabel("Vacuum [hPa]")
+    plt.ylim([-1000, 0])
+    # plt.ylabel("Force [N]")
+    # plt.ylim([0, 7])
     plt.xlim([0, 0.030])
     plt.legend()
     plt.grid()
