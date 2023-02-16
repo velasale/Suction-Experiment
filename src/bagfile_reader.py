@@ -3,11 +3,15 @@ import os
 import re
 import csv
 
+from operator import sub, add
+
 import bagpy
 from matplotlib import pyplot as plt
 import pandas as pd
 from bagpy import bagreader
 import numpy as np
+
+from sklearn.metrics import r2_score
 
 
 def bag_to_csvs(file):
@@ -74,6 +78,8 @@ def read_csvs(experiment, folder):
 
         if file == "rench.csv":
             experiment.wrench_time_stamp = data_list.iloc[:, 0].tolist()
+            experiment.wrench_xforce_values = data_list.iloc[:, 5].tolist()
+            experiment.wrench_yforce_values = data_list.iloc[:, 6].tolist()
             experiment.wrench_zforce_values = data_list.iloc[:, 7].tolist()
 
         if file == "xperiment_steps.csv":
@@ -83,7 +89,88 @@ def read_csvs(experiment, folder):
     return experiment
 
 
-class Experiment():
+def find_file(type, radius, pressure, noise, rep):
+    """"""
+
+    # A. Build the name of the experiment
+    location = os.path.dirname(os.getcwd())
+
+    if type == "horizontal":
+        folder = "/data/x_noise/rep" + str(rep + 1) + "/"
+        filename = "horizontal_#" + str(noise) + \
+                   "_pres_" + str(pressure) + \
+                   "_surface_3DPrinted_with_Primer" + \
+                   "_radius_" + str(radius)
+    elif type == "vertical":
+        folder = "/data/z_noise/rep" + str(rep + 1) + "/"
+        filename = "vertical_#" + str(noise) + \
+                   "_pres_" + str(pressure) + \
+                   "_surface_3DPrinted_with_Primer" + \
+                   "_radius_" + str(radius)
+
+    file_path = location + folder
+
+    # B. Look for the file
+    for f in os.listdir(file_path):
+        if re.match(filename, f) and f.endswith(".bag"):
+            only_filename = f.split(".bag")[0]
+            break
+        else:
+            only_filename = "no_match"
+    print(only_filename)
+
+    if only_filename == "no_match":
+        file = "no_match"
+    else:
+        file = location + folder + only_filename
+
+    return file, only_filename
+
+
+def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, radius, trends='false'):
+    if type == "horizontal":
+        plt.errorbar(x_noises, mean_values, std_values, label=(str(pressure) + " PSI"))
+
+        # Trendline
+        if trends == 'true':
+            z = np.polyfit(x_noises, mean_values, 4)
+            p = np.poly1d(z)
+            plt.plot(x_noises, p(x_noises), linestyle='dashed', color='black')
+            print(r2_score(mean_values, p(x_noises)))
+            plt.annotate("r-squared = {:.3f}".format(r2_score(mean_values, p(x_noises))), (0.01, -200))
+
+        # Trial of fill between
+        # plt.plot(noises_xnoises, noises_vacuum_means)
+        # plt.fill_between(noises_xnoises, list(map(sub, noises_vacuum_means, noises_vacuum_stds)), list(map(add,noises_vacuum_means, noises_vacuum_stds)), alpha=.5)
+
+        title = "Cartesian noise in x, for %.2f mm diameter" % (2000*radius)
+        plt.xlabel("x-noise [m]")
+
+    elif type == "vertical":
+        plt.errorbar(z_noises, mean_values, std_values, label=(str(pressure) + " PSI"))
+
+        # Trendline
+        if trends == 'true':
+            z = np.polyfit(z_noises, mean_values, 4)
+            p = np.poly1d(z)
+            plt.plot(z_noises, p(z_noises), linestyle='dashed', color='black')
+            plt.annotate("r-squared = {:.3f}".format(r2_score(mean_values, p(z_noises))),(0.01, -200))
+
+        title = "Cartesian noise in z, for %.2f mm diameter" % (2000*radius)
+        plt.xlabel("z-noise [m]")
+
+    plt.ylabel("Vacuum [hPa]")
+    plt.ylim([-1000, 0])
+    # plt.ylabel("Force [N]")
+    # plt.ylim([0, 7])
+    plt.xlim([0, 0.030])
+    plt.legend()
+    plt.grid()
+    plt.title(title)
+    plt.show()
+
+
+class Experiment:
     """Class to define experiments as objects.
     Each experiment has properties from the json file.
 
@@ -118,6 +205,10 @@ class Experiment():
 
         self.wrench_time_stamp = []
         self.wrench_elapsed_time = []
+        self.wrench_xforce_values = []
+        self.wrench_xforce_relative_values = []
+        self.wrench_yforce_values = []
+        self.wrench_yforce_relative_values = []
         self.wrench_zforce_values = []
         self.wrench_zforce_relative_values = []
 
@@ -134,6 +225,7 @@ class Experiment():
         self.steady_vacuum_mean = 0
         self.steady_vacuum_std = 0
         self.max_detach_zforce = 0
+        self.max_detach_zforce_time = 0
 
     def get_features(self):
         """Basically run all the methods"""
@@ -153,7 +245,7 @@ class Experiment():
             self.first_time_stamp = 0
 
     def elapsed_times(self):
-        """Subtracts the initial stamp from all the time-stamps to improve readability"""
+        """Subtracts the initial stamp from all the topics' time-stamps to improve readability"""
 
         # First Obtain the initial time stamp of the experiment as a reference to the rest
         self.initial_stamp()
@@ -210,7 +302,7 @@ class Experiment():
             self.wrench_zforce_relative_values.append(relative_force)
 
     def get_detach_force(self):
-        """Method to obtain the mean and std deviation of the vacuum during the retrieval
+        """Method to obtain the max force during the retrieval
         """
 
         # Get the index at which the steady state starts and ends
@@ -229,6 +321,8 @@ class Experiment():
 
         try:
             self.max_detach_zforce = max(detach_values)
+            index = self.wrench_zforce_relative_values.index(self.max_detach_zforce)
+            self.max_detach_zforce_time = self.wrench_elapsed_time[index]
         except ValueError:
             self.max_detach_zforce = "error"
 
@@ -314,9 +408,12 @@ class Experiment():
             self.errors.append("Cup collapsed after retrieve")
 
     def plots_stuff(self):
+        """Plots wrench (forces and moments) and pressure readings"""
 
         force_time = self.wrench_elapsed_time
-        force_values = self.wrench_zforce_relative_values
+        xforce_values = self.wrench_xforce_values
+        yforce_values = self.wrench_yforce_values
+        zforce_values = self.wrench_zforce_relative_values
 
         pressure_time = self.pressure_elapsed_time
         pressure_values = self.pressure_values
@@ -324,23 +421,32 @@ class Experiment():
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        figure, axis = plt.subplots(2, 1)
-        axis[0].plot(force_time, force_values)
-        axis[1].plot(pressure_time, pressure_values)
+        max_force_time = self.max_detach_zforce_time
+        max_force_val = self.max_detach_zforce
 
-        # Add vertical lines at the events
-        for event, label in zip(event_x, event_y):
-            axis[0].axvline(x=event, color='red', linestyle='dotted', linewidth=2)
-            axis[1].axvline(x=event, color='red', linestyle='dotted', linewidth=2)
-            axis[0].text(event, np.mean(force_values), label, rotation=90)
-            axis[1].text(event, np.mean(pressure_values), label, rotation=90)
+        # --- Labels, limits and other annotations ---
+        figure, axis = plt.subplots(4, 1)
+        yvalues = [zforce_values, yforce_values, xforce_values, pressure_values]
+        xvalues = [force_time, force_time, force_time, pressure_time]
+        ylabels = ["zForce [N]", "yForce [N]", "xForce [N]", "Pressure [hPa]"]
+        ylims = [[-20, 15], [-20, 15], [-20, 15], [0, 1100]]
+        for i in range(len(axis)):
+            axis[i].plot(xvalues[i], yvalues[i])
+            axis[i].axvline(x=max_force_time, color='orange', linestyle='dotted', linewidth=2)
+            axis[i].grid()
+            axis[i].set_ylabel(ylabels[i])
+            axis[i].set_ylim(ylims[i])
+            # Add vertical lines at the events
+            for event, label in zip(event_x, event_y):
+                axis[i].axvline(x=event, color='red', linestyle='dotted', linewidth=2)
+                axis[i].text(event, np.mean(yvalues[i]), label, rotation=90, color='red')
 
-        # plt.ylim([0, 1200])
-        axis[0].grid()
-        axis[0].set_ylabel("Force [N]")
-        axis[1].grid()
-        axis[1].set_ylabel("Pressure [hPa]")
-        plt.xlabel('elapsed time [s]')
+        # ---- Max Force Annotations ---
+        axis[0].annotate('Max Force', xy=(max_force_time, max_force_val),
+                         xycoords='data', xytext=(max_force_time + 0.5, max_force_val + 10),
+                         va='top', ha='left', arrowprops=dict(facecolor='black', shrink=0))
+
+        # --- Add error in the title if there was any ---
         try:
             error_type = self.errors[0]
         except IndexError:
@@ -350,11 +456,11 @@ class Experiment():
 
 def main():
 
-    # TODO Point in the plots the location of max values
-    # TODO PLot xForces
+    # TODO smooth wrenches
+    # TODO Plot xForces
     # TODO Plot Moments
     # TODO PLots for different surface finishes - other experiment
-    # TODO Plot trend lines
+    # TODO Deal with the videos and images
 
     plt.figure()
 
@@ -365,8 +471,6 @@ def main():
     radius = 0.0425
     # radius = 0.0375
     pressures = [50, 60, 70, 80]
-    # pressures = [60, 70]
-    # pressures = [80]
     n_noises = 10
     n_reps = 3
 
@@ -392,57 +496,33 @@ def main():
             # --- Sweep all repetitions ---
             for rep in range(n_reps):
 
-                # A. Build the name of the experiment
-                location = os.path.dirname(os.getcwd())
-                if exp_type == "horizontal":
-                    folder = "/data/x_noise/rep" + str(rep+1) + "/"
-                    filename = "horizontal_#" + str(noise) +\
-                           "_pres_" + str(pressure) +\
-                           "_surface_3DPrinted_with_Primer" +\
-                           "_radius_" + str(radius)
-                elif exp_type == "vertical":
-                    folder = "/data/z_noise/rep" + str(rep + 1) + "/"
-                    filename = "vertical_#" + str(noise) + \
-                               "_pres_" + str(pressure) + \
-                               "_surface_3DPrinted_with_Primer" + \
-                               "_radius_" + str(radius)
-
-                file_path = location + folder
-
-                # B. Look for the file
-                for f in os.listdir(file_path):
-                    if re.match(filename, f) and f.endswith(".bag"):
-                        only_filename = f.split(".bag")[0]
-                        break
-                    else:
-                        only_filename = "no_match"
-                print(only_filename)
-
-                if only_filename == "no_match":
+                # 1. Find file
+                file, only_filename = find_file(exp_type, radius, pressure, noise, rep)
+                if file == "no_match":
                     break
 
-                # C. Turn Bag into csvs if needed
+                # 2. Turn Bag into csvs if needed
                 # Comment if it is already done
-                # bag_to_csvs(file_path + only_filename + ".bag")
+                # bag_to_csvs(file + ".bag")
 
-                # D. Read attributes from 'json' files
-                metadata = read_json(file_path + only_filename + ".json")
+                # 3. Read attributes from 'json' files
+                metadata = read_json(file + ".json")
 
-                # E. Read values from 'csv' files for each 'json' file
-                experiment = read_csvs(metadata, (file_path + only_filename))
+                # 4. Read values from 'csv' files for each 'json' file
+                experiment = read_csvs(metadata, file)
                 experiment.filename = only_filename
 
-                # F. Get different properties for each experiment
+                # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                # experiment.plots_stuff()
-                # plt.show()
+                experiment.plots_stuff()
+                plt.show()
 
-                # G. Check if there were any errors during the experiment
+                # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:
                     break
 
-                # H. Gather features from all the repetitions of the experiment
+                # 7. Gather features from all the repetitions of the experiment
                 reps_xnoises.append(experiment.x_noise)
                 reps_znoises.append(experiment.z_noise)
                 reps_vacuum_means.append(round(experiment.steady_vacuum_mean, 2))
@@ -471,25 +551,11 @@ def main():
             noises_zforce_stds.append(round(final_zforce_std, 2))
 
         # --- Once all values are collected for all noises, print and plot
-        if exp_type == "horizontal":
-            plt.errorbar(noises_xnoises, noises_vacuum_means, noises_vacuum_stds, label=(str(pressure) + " PSI"))
-            # plt.errorbar(noises_xnoises, noises_zforce_means, noises_zforce_stds, label=(str(pressure) + " PSI"))
-            title = "Cartesian noise in x, for %.4f radius" % (radius)
-            plt.xlabel("x-noise [m]")
-        elif exp_type == "vertical":
-            plt.errorbar(noises_znoises, noises_vacuum_means, noises_vacuum_stds, label=(str(pressure) + " PSI"))
-            # plt.errorbar(noises_znoises, noises_zforce_means, noises_zforce_stds, label=(str(pressure) + " PSI"))
-            title = "Cartesian noise in z, for %.4f radius" % (radius)
-            plt.xlabel("z-noise [m]")
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means, noises_vacuum_stds, pressure, radius, 'true')
 
-    plt.ylabel("Vacuum [hPa]")
-    plt.ylim([-1000, 0])
-    # plt.ylabel("Force [N]")
-    # plt.ylim([0, 7])
-    plt.xlim([0, 0.030])
-    plt.legend()
+        # plt.show()
+
     plt.grid()
-    plt.title(title)
     plt.show()
 
 
