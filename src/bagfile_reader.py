@@ -81,6 +81,9 @@ def read_csvs(experiment, folder):
             experiment.wrench_xforce_values = data_list.iloc[:, 5].tolist()
             experiment.wrench_yforce_values = data_list.iloc[:, 6].tolist()
             experiment.wrench_zforce_values = data_list.iloc[:, 7].tolist()
+            experiment.wrench_xtorque_values = data_list.iloc[:, 8].tolist()
+            experiment.wrench_ytorque_values = data_list.iloc[:, 9].tolist()
+            experiment.wrench_ztorque_values = data_list.iloc[:, 10].tolist()
 
         if file == "xperiment_steps.csv":
             experiment.event_time_stamp = data_list.iloc[:, 0].tolist()
@@ -205,12 +208,20 @@ class Experiment:
 
         self.wrench_time_stamp = []
         self.wrench_elapsed_time = []
+
         self.wrench_xforce_values = []
         self.wrench_xforce_relative_values = []
         self.wrench_yforce_values = []
         self.wrench_yforce_relative_values = []
         self.wrench_zforce_values = []
         self.wrench_zforce_relative_values = []
+
+        self.wrench_xtorque_values = []
+        self.wrench_xtorque_relative_values = []
+        self.wrench_ytorque_values = []
+        self.wrench_ytorque_relative_values = []
+        self.wrench_ztorque_values = []
+        self.wrench_ztorque_relative_values = []
 
         self.event_time_stamp = []
         self.event_elapsed_time = []
@@ -224,6 +235,10 @@ class Experiment:
         self.steady_pressure_values = []
         self.steady_vacuum_mean = 0
         self.steady_vacuum_std = 0
+        self.max_detach_xforce = 0
+        self.max_detach_xforce_time = 0
+        self.max_detach_yforce = 0
+        self.max_detach_yforce_time = 0
         self.max_detach_zforce = 0
         self.max_detach_zforce_time = 0
 
@@ -314,19 +329,35 @@ class Experiment:
         vacuum_stops = self.event_elapsed_time[end_index]
 
         # Get the detachment values
-        detach_values = []
+        x_detach_values = []
+        for time, value in zip(self.wrench_elapsed_time, self.wrench_xforce_values):
+            if (time > retrieve_start) and (time < vacuum_stops):
+                x_detach_values.append(value)
+
+        # Get Max values
+        try:
+            self.max_detach_xforce = max(x_detach_values)
+            index = self.wrench_xforce_values.index(self.max_detach_xforce)
+            self.max_detach_xforce_time = self.wrench_elapsed_time[index]
+        except ValueError:
+            self.max_detach_xforce = "error"
+
+        y_detach_values = []
+
+        z_detach_values = []
         for time, value in zip(self.wrench_elapsed_time, self.wrench_zforce_relative_values):
             if (time > retrieve_start) and (time < vacuum_stops):
-                detach_values.append(value)
+                z_detach_values.append(value)
 
+        # Get Max values
         try:
-            self.max_detach_zforce = max(detach_values)
+            self.max_detach_zforce = max(z_detach_values)
             index = self.wrench_zforce_relative_values.index(self.max_detach_zforce)
             self.max_detach_zforce_time = self.wrench_elapsed_time[index]
         except ValueError:
             self.max_detach_zforce = "error"
 
-        return self.max_detach_zforce
+        return self.max_detach_zforce, self.max_detach_xforce
 
         # print("\n %.0d Maximum detachment force %.2f" % (self.id, self.max_detach_zforce))
 
@@ -415,57 +446,92 @@ class Experiment:
         yforce_values = self.wrench_yforce_values
         zforce_values = self.wrench_zforce_relative_values
 
+        xtorque_values = self.wrench_xtorque_values
+        ytorque_values = self.wrench_ytorque_values
+        ztorque_values = self.wrench_ztorque_values
+
         pressure_time = self.pressure_elapsed_time
         pressure_values = self.pressure_values
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        max_force_time = self.max_detach_zforce_time
-        max_force_val = self.max_detach_zforce
+        max_xforce_time = self.max_detach_xforce_time
+        max_xforce_val = self.max_detach_xforce
+        max_zforce_time = self.max_detach_zforce_time
+        max_zforce_val = self.max_detach_zforce
 
         # --- Labels, limits and other annotations ---
-        figure, axis = plt.subplots(4, 1)
+        figure, axis = plt.subplots(4, 2)
         yvalues = [zforce_values, yforce_values, xforce_values, pressure_values]
         xvalues = [force_time, force_time, force_time, pressure_time]
         ylabels = ["zForce [N]", "yForce [N]", "xForce [N]", "Pressure [hPa]"]
         ylims = [[-20, 15], [-20, 15], [-20, 15], [0, 1100]]
+        # yvalues = [zforce_values, xforce_values, pressure_values]
+        # xvalues = [force_time, force_time, pressure_time]
+        # ylabels = ["zForce [N]", "xForce [N]", "Pressure [hPa]"]
+        # ylims = [[-20, 15], [-20, 15], [0, 1100]]
         for i in range(len(axis)):
-            axis[i].plot(xvalues[i], yvalues[i])
-            axis[i].axvline(x=max_force_time, color='orange', linestyle='dotted', linewidth=2)
-            axis[i].grid()
-            axis[i].set_ylabel(ylabels[i])
-            axis[i].set_ylim(ylims[i])
+            axis[i, 0].plot(xvalues[i], yvalues[i])
+            axis[i, 0].axvline(x=max_xforce_time, color='red', linestyle='dashed', linewidth=1)
+            axis[i, 0].axvline(x=max_zforce_time, color='blue', linestyle='dashed', linewidth=1)
+            axis[i, 0].grid()
+            axis[i, 0].set_ylabel(ylabels[i])
+            axis[i, 0].set_ylim(ylims[i])
             # Add vertical lines at the events
             for event, label in zip(event_x, event_y):
-                axis[i].axvline(x=event, color='red', linestyle='dotted', linewidth=2)
-                axis[i].text(event, np.mean(yvalues[i]), label, rotation=90, color='red')
+                axis[i, 0].axvline(x=event, color='black', linestyle='dotted', linewidth=1)
+                if i == (len(axis)-1):
+                    axis[i, 0].text(event, 100, label, rotation=90, color='black')
+                    axis[i, 0].set_xlabel("Elapsed Time [sec]")
 
         # ---- Max Force Annotations ---
-        axis[0].annotate('Max Force', xy=(max_force_time, max_force_val),
-                         xycoords='data', xytext=(max_force_time + 0.5, max_force_val + 10),
-                         va='top', ha='left', arrowprops=dict(facecolor='black', shrink=0))
+        axis[1, 0].annotate('Max xForce', xy=(max_xforce_time, max_xforce_val),
+                         xycoords='data', xytext=(max_xforce_time + 0.5, max_xforce_val + 10),
+                         va='top', ha='left', arrowprops=dict(facecolor='red', shrink=0))
+        axis[0, 0].annotate('Max zForce', xy=(max_zforce_time, max_zforce_val),
+                         xycoords='data', xytext=(max_zforce_time + 0.5, max_zforce_val + 10),
+                         va='top', ha='left', arrowprops=dict(facecolor='blue', shrink=0))
 
         # --- Add error in the title if there was any ---
         try:
             error_type = self.errors[0]
         except IndexError:
             error_type = "good data"
-        axis[0].set_title(self.filename + "\n" + error_type)
+        axis[0, 0].set_title(self.filename + "\n" + error_type)
+
+        # --- Labels, limits and other annotations ---
+        yvalues = [ztorque_values, ytorque_values, xtorque_values, pressure_values]
+        xvalues = [force_time, force_time, force_time, pressure_time]
+        ylabels = ["zTorque [N]", "yTorque  [N]", "xTorque [N]", "Pressure [hPa]"]
+        ylims = [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [0, 1100]]
+
+        for i in range(len(axis)):
+            axis[i, 1].plot(xvalues[i], yvalues[i])
+            axis[i, 1].axvline(x=max_xforce_time, color='red', linestyle='dashed', linewidth=1)
+            axis[i, 1].axvline(x=max_zforce_time, color='blue', linestyle='dashed', linewidth=1)
+            axis[i, 1].grid()
+            axis[i, 1].set_ylabel(ylabels[i])
+            axis[i, 1].set_ylim(ylims[i])
+            # Add vertical lines at the events
+            for event, label in zip(event_x, event_y):
+                axis[i, 1].axvline(x=event, color='black', linestyle='dotted', linewidth=1)
+                if i == (len(axis) - 1):
+                    axis[i, 1].text(event, 0, label, rotation=90, color='black')
+                    axis[i, 1].set_xlabel("Elapsed Time [sec]")
 
 
 def main():
 
     # TODO smooth wrenches
-    # TODO Plot xForces
     # TODO Plot Moments
     # TODO PLots for different surface finishes - other experiment
     # TODO Deal with the videos and images
 
     plt.figure()
 
-    exp_type = "vertical"
-    # exp_type = "horizontal"
+    # exp_type = "vertical"
+    exp_type = "horizontal"
 
     # --- Controlled variables ---
     radius = 0.0425
