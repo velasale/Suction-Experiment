@@ -447,7 +447,6 @@ class SuctionExperiment():
         tf_buffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tf_buffer)
 
-
         # --- Step 1: Set Goal Pose in the intuitive/easy c-frame
         goal_pose = tf2_geometry_msgs.PoseStamped()
         goal_pose.header.frame_id = "sphere"
@@ -485,60 +484,6 @@ class SuctionExperiment():
         success = all_close(goal_pose_pframe.pose, current_pose, 0.01)
 
         return success
-
-
-        """
-    Creates a text as a Marker
-    @ r,g,b: Indexes of the color in rgb format
-    @ a: Alpha value - from 0 (invisible) to 1 (opaque)
-    @ x,y,z: coordinates of the marker
-    @ scale
-    @ text: Text to display in RVIZ
-    """
-        # Create a marker.  Markers of all shapes share a common type.
-        caption = Marker()
-
-        # Set the frame ID and type.  The frame ID is the frame in which the position of the marker
-        # is specified.  The type is the shape of the marker, detailed on the wiki page.
-        caption.header.frame_id = "world"
-        caption.type = caption.TEXT_VIEW_FACING
-
-        # Each marker has a unique ID number.  If you have more than one marker that you want displayed at a
-        # given time, then each needs to have a unique ID number.  If you publish a new marker with the same
-        # ID number and an existing marker, it will replace the existing marker with that ID number.
-        caption.id = 0
-
-        # Set the action.  We can add, delete, or modify markers.
-        caption.action = caption.ADD
-
-        # These are the size parameters for the marker.  The effect of these on the marker will vary by shape,
-        # but, basically, they specify how big the marker along each of the axes of the coordinate frame named
-        # in frame_id.
-        caption.scale.x = scale
-        caption.scale.y = scale
-        caption.scale.z = scale
-
-        # Color, as an RGB triple, from 0 to 1.
-        caption.color.r = 0
-        caption.color.g = 0
-        caption.color.b = 1
-        caption.color.a = 1
-
-        caption.text = text
-
-        # Specify the pose of the marker.  Since spheres are rotationally invarient, we're only going to specify
-        # the positional elements.  As usual, these are in the coordinate frame named in frame_id.  Every time the
-        # marker is displayed in rviz, ROS will use tf to determine where the marker should appear in the scene.
-        # in this case, the position will always be directly above the robot, and will move with it.
-        caption.pose.position.x = x
-        caption.pose.position.y = y
-        caption.pose.position.z = z
-
-        # Set up a publisher.  We're going to publish on a topic called balloon.
-        self.markerTextPublisher.publish(caption)
-
-        # Set a rate.  10 Hz is a good default rate for a marker moving with the Fetch robot.
-        rate = rospy.Rate(10)
 
     def add_cartesian_noise(self, x_noise, y_noise, z_noise):
         
