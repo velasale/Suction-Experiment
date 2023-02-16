@@ -4,7 +4,7 @@ import re
 import csv
 
 from operator import sub, add
-from cv_bridge import CvBridge
+# from cv_bridge import CvBridge
 import cv2
 
 import bagpy
@@ -550,6 +550,7 @@ def main():
     # TODO smooth wrenches
     # TODO PLots for different surface finishes - other experiment
     # TODO Deal with the videos and images
+    # TODO Interpret moments. Consider that the lever is the height of the rig
 
     plt.figure()
 
