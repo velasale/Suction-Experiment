@@ -1,3 +1,4 @@
+""" Handy to homogenize filenames"""
 import os
 
 location = os.path.dirname(os.getcwd())

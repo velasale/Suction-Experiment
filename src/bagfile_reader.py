@@ -14,6 +14,7 @@ from bagpy import bagreader
 import numpy as np
 
 from sklearn.metrics import r2_score
+from scipy.ndimage import gaussian_filter, median_filter
 
 
 def bag_to_csvs(file):
@@ -102,7 +103,7 @@ def read_csvs(experiment, folder):
     return experiment
 
 
-def find_file(type, radius, pressure, noise, rep):
+def find_file(type, radius, pressure, noise, rep, surface):
     """"""
 
     # A. Build the name of the experiment
@@ -120,8 +121,15 @@ def find_file(type, radius, pressure, noise, rep):
                    "_pres_" + str(pressure) + \
                    "_surface_3DPrinted_with_Primer" + \
                    "_radius_" + str(radius)
+    elif type == "simple_suction":
+        folder = "/data/simple_suction/"
+        filename = "simple_suction_#" + str(rep) +\
+                    "_pres_" + str(pressure) +\
+                    "_surface_" + surface +\
+                    "_radius_0.0375"
 
     file_path = location + folder
+    # print("\nSearching for:", filename)
 
     # B. Look for the file
     for f in os.listdir(file_path):
@@ -130,7 +138,7 @@ def find_file(type, radius, pressure, noise, rep):
             break
         else:
             only_filename = "no_match"
-    print(only_filename)
+    # print(only_filename)
 
     if only_filename == "no_match":
         file = "no_match"
@@ -244,6 +252,7 @@ class Experiment:
         self.steady_pressure_values = []
         self.steady_vacuum_mean = 0
         self.steady_vacuum_std = 0
+
         self.max_detach_xforce = 0
         self.max_detach_xforce_time = 0
         self.max_detach_yforce = 0
@@ -251,14 +260,29 @@ class Experiment:
         self.max_detach_zforce = 0
         self.max_detach_zforce_time = 0
 
+        self.max_detach_ytorque = 0
+        self.max_detach_ytorque_time = 0
+
     def get_features(self):
         """Basically run all the methods"""
         self.elapsed_times()
         self.get_atmospheric_pressure()
         self.get_steady_vacuum()
+
+        # filter wrench signals
+        self.filter_wrench(21)
+
         self.get_relative_values()
-        self.get_detach_force()
+        self.get_detach_values()
         self.check_errors()
+
+    def filter_wrench(self, filter_param):
+        self.wrench_xforce_values = median_filter(self.wrench_xforce_values, filter_param)
+        self.wrench_yforce_values = median_filter(self.wrench_yforce_values, filter_param)
+        self.wrench_zforce_values = median_filter(self.wrench_zforce_values, filter_param)
+        self.wrench_xtorque_values = median_filter(self.wrench_xtorque_values, filter_param)
+        self.wrench_ytorque_values = median_filter(self.wrench_ytorque_values, filter_param)
+        self.wrench_ztorque_values = median_filter(self.wrench_ztorque_values, filter_param)
 
     def initial_stamp(self):
         """Takes the initial stamp from all the topics. This is useful to subtract from all Time stamps and get a readable time"""
@@ -295,12 +319,12 @@ class Experiment:
 
         self.atmospheric_pressure = max(first_reading, last_reading)
 
-    def get_steady_vacuum(self):
+    def get_steady_vacuum(self, start_label='Steady', end_label='Retrieve'):
         """Method to obtain the mean and std deviation of the vacuum during steady state"""
 
         # Get the index at which the steady state starts and ends
-        start_index = self.event_values.index('Steady')
-        end_index = self.event_values.index("Retrieve")
+        start_index = self.event_values.index(start_label)
+        end_index = self.event_values.index(end_label)
 
         # Get the time at which the steady state starts and ends
         steady_vacuum_start = self.event_elapsed_time[start_index]
@@ -315,7 +339,7 @@ class Experiment:
         self.steady_vacuum_mean = np.mean(self.steady_pressure_values)
         self.steady_vacuum_std = np.std(self.steady_pressure_values)
 
-        print("\n\nMean: %.2f and Std: %.2f" % (self.steady_vacuum_mean, self.steady_vacuum_std))
+        # print("\n\nMean: %.2f and Std: %.2f" % (self.steady_vacuum_mean, self.steady_vacuum_std))
 
         return self.steady_vacuum_mean, self.steady_vacuum_std
 
@@ -335,48 +359,51 @@ class Experiment:
             self.wrench_ytorque_relative_values.append(relative_ytorque)
             self.wrench_xtorque_relative_values.append(relative_xtorque)
 
-    def get_detach_force(self):
+    def get_detach_values(self):
         """Method to obtain the max force during the retrieval
         """
+        if self.exp_type == 'simple_suction':
+            start_label = 'Steady'
+        else:
+            start_label = 'Retrieve'
 
-        # Get the index at which the steady state starts and ends
-        start_index = self.event_values.index('Retrieve')
+        # Get indexes where detachment occurs
+        start_index = self.event_values.index(start_label)
         end_index = self.event_values.index("Vacuum Off")
 
         # Get the time at which the steady state starts and ends
         retrieve_start = self.event_elapsed_time[start_index]
         vacuum_stops = self.event_elapsed_time[end_index]
 
-        # --- X AXIS ---
-        # Get the detachment values
-        x_detach_values = []
-        for time, value in zip(self.wrench_elapsed_time, self.wrench_xforce_relative_values):
-            if (time > retrieve_start) and (time < vacuum_stops):
-                x_detach_values.append(value)
+        xforce_detach_values = []
+        ytorque_detach_values = []
+        zforce_detach_values = []
 
-        # Get Max values
-        try:
-            self.max_detach_xforce = max(x_detach_values)
-            index = self.wrench_xforce_relative_values.index(self.max_detach_xforce)
-            self.max_detach_xforce_time = self.wrench_elapsed_time[index]
-        except ValueError:
-            self.max_detach_xforce = "error"
+        list_of_detach_values = [xforce_detach_values, ytorque_detach_values, zforce_detach_values]
+        list_of_values = [self.wrench_xforce_relative_values, self.wrench_ytorque_relative_values, self.wrench_zforce_relative_values]
 
-        y_detach_values = []
+        list_of_max_values = []
+        list_of_max_times = []
 
-        # --- Z AXIS ---
-        z_detach_values = []
-        for time, value in zip(self.wrench_elapsed_time, self.wrench_zforce_relative_values):
-            if (time > retrieve_start) and (time < vacuum_stops):
-                z_detach_values.append(value)
+        for detach_value, values in zip(list_of_detach_values, list_of_values):
+            for time, value in zip(self.wrench_elapsed_time, values):
+                if (time > retrieve_start) and (time < vacuum_stops):
+                    detach_value.append(value)
+            try:
+                max_value = max(detach_value)
+                list_of_max_values.append(max_value)
+                index = values.index(max_value)
+                max_time = self.wrench_elapsed_time[index]
+                list_of_max_times.append(max_time)
+            except ValueError:
+                max_value = "error"
 
-        # Get Max values
-        try:
-            self.max_detach_zforce = max(z_detach_values)
-            index = self.wrench_zforce_relative_values.index(self.max_detach_zforce)
-            self.max_detach_zforce_time = self.wrench_elapsed_time[index]
-        except ValueError:
-            self.max_detach_zforce = "error"
+        self.max_detach_xforce = list_of_max_values[0]
+        self.max_detach_xforce_time = list_of_max_times[0]
+        self.max_detach_ytorque = list_of_max_values[1]
+        self.max_detach_ytorque_time = list_of_max_times[1]
+        self.max_detach_zforce = list_of_max_values[2]
+        self.max_detach_zforce_time = list_of_max_times[2]
 
         return self.max_detach_zforce, self.max_detach_xforce
 
@@ -479,6 +506,8 @@ class Experiment:
         max_xforce_val = self.max_detach_xforce
         max_zforce_time = self.max_detach_zforce_time
         max_zforce_val = self.max_detach_zforce
+        max_ytorque_time = self.max_detach_ytorque_time
+        max_ytorque_val = self.max_detach_ytorque
 
         # --- Labels, limits and other annotations ---
         figure, axis = plt.subplots(4, 2, figsize=(9, 9))
@@ -487,10 +516,6 @@ class Experiment:
         ylabels = ["zForce [N]", "yForce [N]", "xForce [N]", "Pressure [hPa]"]
         ylims = [[-22, 15], [-22, 15], [-22, 15], [0, 1100]]
         colors = ['blue', 'green', 'red', 'black']
-        # yvalues = [zforce_values, xforce_values, pressure_values]
-        # xvalues = [force_time, force_time, pressure_time]
-        # ylabels = ["zForce [N]", "xForce [N]", "Pressure [hPa]"]
-        # ylims = [[-20, 15], [-20, 15], [0, 1100]]
         for i in range(len(axis)):
             axis[i, 0].plot(xvalues[i], yvalues[i], colors[i])
             axis[i, 0].axvline(x=max_xforce_time, color='red', linestyle='dashed', linewidth=1)
@@ -506,24 +531,27 @@ class Experiment:
                     axis[i, 0].set_xlabel("Elapsed Time [sec]")
 
         # ---- Max Force Annotations ---
-        axis[2, 0].annotate('Max xForce:' + str(round(max_xforce_val, 2)), xy=(max_xforce_time, max_xforce_val),
-                         xycoords='data', xytext=(max_xforce_time + 0.5, max_xforce_val + 10),
-                         va='top', ha='left', arrowprops=dict(facecolor='red', shrink=0))
-        axis[0, 0].annotate('Max zForce:' + str(round(max_zforce_val, 2)), xy=(max_zforce_time, max_zforce_val),
-                         xycoords='data', xytext=(max_zforce_time + 0.5, max_zforce_val + 10),
-                         va='top', ha='left', arrowprops=dict(facecolor='blue', shrink=0))
+        axis[2, 0].annotate('Max xForce:' + str(round(max_xforce_val, 3)), xy=(max_xforce_time, max_xforce_val),
+                         xycoords='data', xytext=(max_xforce_time - 0.5, max_xforce_val + 10),
+                         va='top', ha='right', arrowprops=dict(facecolor='red', shrink=0))
+        axis[0, 0].annotate('Max zForce:' + str(round(max_zforce_val, 3)), xy=(max_zforce_time, max_zforce_val),
+                         xycoords='data', xytext=(max_zforce_time - 0.5, max_zforce_val + 10),
+                         va='top', ha='right', arrowprops=dict(facecolor='blue', shrink=0))
+        axis[1, 1].annotate('Max yTorque:' + str(round(max_ytorque_val, 4)), xy=(max_ytorque_time, max_ytorque_val),
+                            xycoords='data', xytext=(max_ytorque_time - 0.5, max_ytorque_val + 0.15),
+                            va='top', ha='right', arrowprops=dict(facecolor='green', shrink=0))
 
         # --- Add error in the title if there was any ---
         try:
             error_type = self.errors[0]
         except IndexError:
-            error_type = "good data"
-        axis[0, 0].set_title(self.filename + "\n" + error_type)
+            error_type = "data looks good"
+        figure.suptitle(self.filename + "\n\n" + error_type)
 
         # --- Labels, limits and other annotations ---
         yvalues = [ztorque_values, ytorque_values, xtorque_values, pressure_values]
         xvalues = [force_time, force_time, force_time, pressure_time]
-        ylabels = ["zTorque [N]", "yTorque  [N]", "xTorque [N]", "Pressure [hPa]"]
+        ylabels = ["zTorque [Nm]", "yTorque [Nm]", "xTorque [Nm]", "Pressure [hPa]"]
         ylims = [[-0.3, 0.3], [-0.3, 0.3], [-0.3, 0.3], [0, 1100]]
         colors = ['blue', 'green', 'red', 'black']
 
@@ -543,19 +571,32 @@ class Experiment:
                     axis[i, 1].text(event, 0, label, rotation=90, color='black')
                     axis[i, 1].set_xlabel("Elapsed Time [sec]")
 
+    def plot_only_pressure(self):
+        """Plots wrench (forces and moments) and pressure readings"""
 
-def main():
+        pressure_time = self.pressure_elapsed_time
+        pressure_values = self.pressure_values
 
-    # TODO remove bias in all wrench
-    # TODO smooth wrenches
-    # TODO PLots for different surface finishes - other experiment
-    # TODO Deal with the videos and images
-    # TODO Interpret moments. Consider that the lever is the height of the rig
+        event_x = self.event_elapsed_time
+        event_y = self.event_values
+
+        plt.plot(pressure_time, pressure_values)
+
+        for event, label in zip(event_x, event_y):
+            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1)
+            plt.text(event, 600, label, rotation=90, color='black')
+            plt.xlabel("Elapsed Time [sec]")
+
+        plt.grid()
+        plt.title(self.filename)
+
+
+def noise_experiments(exp_type="vertical"):
 
     plt.figure()
 
     # exp_type = "vertical"
-    exp_type = "horizontal"
+    # exp_type = "horizontal"
 
     # --- Controlled variables ---
     radius = 0.0425
@@ -587,7 +628,7 @@ def main():
             for rep in range(n_reps):
 
                 # 1. Find file
-                file, only_filename = find_file(exp_type, radius, pressure, noise, rep)
+                file, only_filename = find_file(exp_type, radius, pressure, noise, rep, 'surface')
                 if file == "no_match":
                     break
 
@@ -647,6 +688,82 @@ def main():
 
     plt.grid()
     plt.show()
+
+
+def simple_suction_experiment():
+
+    # --- Controlled variables ---
+    pressures = [50, 60, 70, 80]
+    surfaces = ['Real_Apple', 'Gloss_Fake_Apple', '3DPrinted_with_Primer', '3DPrinted_with_Primer_85mm']
+    n_reps = 5
+
+    # figure, axis = plt.subplots(1, 4, figsize=(10, 5))
+
+    # --- Sweep all pressures ---
+    for pressure, ctr in zip(pressures, range(len(pressures))):
+
+        surfaces_min_vacuums = []
+
+        # --- Sweep all surfaces ---
+        for surface in surfaces:
+
+            reps_min_vacuums = []
+
+            # --- Sweep all reps ---
+            for rep in range(n_reps):
+
+                # 1. Find file
+                file, only_filename = find_file("simple_suction", 10000, pressure, 1000, rep, surface)
+                if file == "no_match":
+                    continue
+
+                # 2. Turn bag into csvs
+                # bag_to_csvs(file + ".bag")
+
+                # 3. Read Attributes from 'json' files
+                metadata = read_json(file + ".json")
+
+                # 4. Read Values from 'csv' files
+                experiment = read_csvs(metadata, file)
+                experiment.filename = only_filename
+
+                # 5. Get some features
+                experiment.elapsed_times()
+                experiment.get_atmospheric_pressure()
+                experiment.get_steady_vacuum('Steady', "Vacuum Off")
+
+                # 6. Plot each experiment if needed
+                experiment.plot_only_pressure()
+                plt.show()
+
+                # 7. Gather features from all reps.
+                reps_min_vacuums.append(min(experiment.steady_pressure_values))
+
+            # Gather features from all surfaces
+            surfaces_min_vacuums.append(reps_min_vacuums)
+
+        # Finally plot valus for the current pressure
+        # axis[ctr].boxplot(surfaces_min_vacuums)
+        # axis[ctr].set_ylim([-1000, -600])
+        # axis[ctr].set_xticklabels(surfaces, rotation=45, fontsize=8)
+        # axis[ctr].set_title('FP: %.0d [PSI]' % pressure)
+        # axis[ctr].set_xlabel('Surface')
+        # axis[ctr].grid()
+
+        # Create a plot for each pressure
+        # print(plot_title, surfaces_min_vacuums)
+    axis[0].set_ylabel('Pressure [hPa]')
+    plt.suptitle('Min Vacuum with different Feeding Pressures (FP)')
+    plt.show()
+
+
+def main():
+
+    # TODO Deal with the videos and images
+    # TODO Interpret moments. Consider that the lever is the height of the rig
+
+    # noise_experiments("vertical")
+    simple_suction_experiment()
 
 
 if __name__ == '__main__':
