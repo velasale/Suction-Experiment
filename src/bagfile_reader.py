@@ -4,6 +4,8 @@ import re
 import csv
 
 from operator import sub, add
+from cv_bridge import CvBridge
+import cv2
 
 import bagpy
 from matplotlib import pyplot as plt
@@ -27,9 +29,17 @@ def bag_to_csvs(file):
 
         # --- Read the desired topic ---
         for topic in topics["Topics"]:
-            data = bag.message_by_topic(topic)
-
-            # Once opened, data is saved automatically into a csv file.
+            if topic != '/camera/color/image_raw':
+                # Once opened, data is saved automatically into a csv file.
+                data = bag.message_by_topic(topic)
+            else:
+                # Source: https://idorobotics.com/2021/03/08/extracting-ros-bag-files-to-python/
+                image_topic = bag.read_messages(topic)
+                for k, b in enumerate(image_topic):
+                    bridge = CvBridge()
+                    cv_image = bridge.imgmsg_to_cv2(b.message, b.message.encoding)
+                    cv_image.astype(np.uint8)
+                    cv2.imwrite(TRIAL + str(b.timestamp) + '.png', cv_image)
 
 
 def read_json(file):
@@ -170,7 +180,6 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, r
     plt.legend()
     plt.grid()
     plt.title(title)
-    plt.show()
 
 
 class Experiment:
@@ -247,7 +256,7 @@ class Experiment:
         self.elapsed_times()
         self.get_atmospheric_pressure()
         self.get_steady_vacuum()
-        self.get_relative_zforces()
+        self.get_relative_values()
         self.get_detach_force()
         self.check_errors()
 
@@ -310,11 +319,21 @@ class Experiment:
 
         return self.steady_vacuum_mean, self.steady_vacuum_std
 
-    def get_relative_zforces(self):
+    def get_relative_values(self):
 
-        for i in range(len(self.wrench_zforce_values)):
-            relative_force = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
-            self.wrench_zforce_relative_values.append(relative_force)
+        for i in range(len(self.wrench_time_stamp)):
+            relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
+            relative_yforce = self.wrench_yforce_values[i] - self.wrench_yforce_values[0]
+            relative_xforce = self.wrench_xforce_values[i] - self.wrench_xforce_values[0]
+            relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
+            relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
+            relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
+            self.wrench_zforce_relative_values.append(relative_zforce)
+            self.wrench_yforce_relative_values.append(relative_yforce)
+            self.wrench_xforce_relative_values.append(relative_xforce)
+            self.wrench_ztorque_relative_values.append(relative_ztorque)
+            self.wrench_ytorque_relative_values.append(relative_ytorque)
+            self.wrench_xtorque_relative_values.append(relative_xtorque)
 
     def get_detach_force(self):
         """Method to obtain the max force during the retrieval
@@ -328,22 +347,24 @@ class Experiment:
         retrieve_start = self.event_elapsed_time[start_index]
         vacuum_stops = self.event_elapsed_time[end_index]
 
+        # --- X AXIS ---
         # Get the detachment values
         x_detach_values = []
-        for time, value in zip(self.wrench_elapsed_time, self.wrench_xforce_values):
+        for time, value in zip(self.wrench_elapsed_time, self.wrench_xforce_relative_values):
             if (time > retrieve_start) and (time < vacuum_stops):
                 x_detach_values.append(value)
 
         # Get Max values
         try:
             self.max_detach_xforce = max(x_detach_values)
-            index = self.wrench_xforce_values.index(self.max_detach_xforce)
+            index = self.wrench_xforce_relative_values.index(self.max_detach_xforce)
             self.max_detach_xforce_time = self.wrench_elapsed_time[index]
         except ValueError:
             self.max_detach_xforce = "error"
 
         y_detach_values = []
 
+        # --- Z AXIS ---
         z_detach_values = []
         for time, value in zip(self.wrench_elapsed_time, self.wrench_zforce_relative_values):
             if (time > retrieve_start) and (time < vacuum_stops):
@@ -358,8 +379,6 @@ class Experiment:
             self.max_detach_zforce = "error"
 
         return self.max_detach_zforce, self.max_detach_xforce
-
-        # print("\n %.0d Maximum detachment force %.2f" % (self.id, self.max_detach_zforce))
 
     def check_errors(self):
         """Method to check possible errors that may invalidate the data. For instance:
@@ -442,13 +461,13 @@ class Experiment:
         """Plots wrench (forces and moments) and pressure readings"""
 
         force_time = self.wrench_elapsed_time
-        xforce_values = self.wrench_xforce_values
-        yforce_values = self.wrench_yforce_values
+        xforce_values = self.wrench_xforce_relative_values
+        yforce_values = self.wrench_yforce_relative_values
         zforce_values = self.wrench_zforce_relative_values
 
-        xtorque_values = self.wrench_xtorque_values
-        ytorque_values = self.wrench_ytorque_values
-        ztorque_values = self.wrench_ztorque_values
+        xtorque_values = self.wrench_xtorque_relative_values
+        ytorque_values = self.wrench_ytorque_relative_values
+        ztorque_values = self.wrench_ztorque_relative_values
 
         pressure_time = self.pressure_elapsed_time
         pressure_values = self.pressure_values
@@ -462,17 +481,18 @@ class Experiment:
         max_zforce_val = self.max_detach_zforce
 
         # --- Labels, limits and other annotations ---
-        figure, axis = plt.subplots(4, 2)
+        figure, axis = plt.subplots(4, 2, figsize=(9, 9))
         yvalues = [zforce_values, yforce_values, xforce_values, pressure_values]
         xvalues = [force_time, force_time, force_time, pressure_time]
         ylabels = ["zForce [N]", "yForce [N]", "xForce [N]", "Pressure [hPa]"]
-        ylims = [[-20, 15], [-20, 15], [-20, 15], [0, 1100]]
+        ylims = [[-22, 15], [-22, 15], [-22, 15], [0, 1100]]
+        colors = ['blue', 'green', 'red', 'black']
         # yvalues = [zforce_values, xforce_values, pressure_values]
         # xvalues = [force_time, force_time, pressure_time]
         # ylabels = ["zForce [N]", "xForce [N]", "Pressure [hPa]"]
         # ylims = [[-20, 15], [-20, 15], [0, 1100]]
         for i in range(len(axis)):
-            axis[i, 0].plot(xvalues[i], yvalues[i])
+            axis[i, 0].plot(xvalues[i], yvalues[i], colors[i])
             axis[i, 0].axvline(x=max_xforce_time, color='red', linestyle='dashed', linewidth=1)
             axis[i, 0].axvline(x=max_zforce_time, color='blue', linestyle='dashed', linewidth=1)
             axis[i, 0].grid()
@@ -486,10 +506,10 @@ class Experiment:
                     axis[i, 0].set_xlabel("Elapsed Time [sec]")
 
         # ---- Max Force Annotations ---
-        axis[1, 0].annotate('Max xForce', xy=(max_xforce_time, max_xforce_val),
+        axis[2, 0].annotate('Max xForce:' + str(round(max_xforce_val, 2)), xy=(max_xforce_time, max_xforce_val),
                          xycoords='data', xytext=(max_xforce_time + 0.5, max_xforce_val + 10),
                          va='top', ha='left', arrowprops=dict(facecolor='red', shrink=0))
-        axis[0, 0].annotate('Max zForce', xy=(max_zforce_time, max_zforce_val),
+        axis[0, 0].annotate('Max zForce:' + str(round(max_zforce_val, 2)), xy=(max_zforce_time, max_zforce_val),
                          xycoords='data', xytext=(max_zforce_time + 0.5, max_zforce_val + 10),
                          va='top', ha='left', arrowprops=dict(facecolor='blue', shrink=0))
 
@@ -504,14 +524,17 @@ class Experiment:
         yvalues = [ztorque_values, ytorque_values, xtorque_values, pressure_values]
         xvalues = [force_time, force_time, force_time, pressure_time]
         ylabels = ["zTorque [N]", "yTorque  [N]", "xTorque [N]", "Pressure [hPa]"]
-        ylims = [[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [0, 1100]]
+        ylims = [[-0.3, 0.3], [-0.3, 0.3], [-0.3, 0.3], [0, 1100]]
+        colors = ['blue', 'green', 'red', 'black']
 
         for i in range(len(axis)):
-            axis[i, 1].plot(xvalues[i], yvalues[i])
+            axis[i, 1].plot(xvalues[i], yvalues[i], colors[i])
             axis[i, 1].axvline(x=max_xforce_time, color='red', linestyle='dashed', linewidth=1)
             axis[i, 1].axvline(x=max_zforce_time, color='blue', linestyle='dashed', linewidth=1)
             axis[i, 1].grid()
             axis[i, 1].set_ylabel(ylabels[i])
+            axis[i, 1].yaxis.set_label_position("right")
+            axis[i, 1].yaxis.tick_right()
             axis[i, 1].set_ylim(ylims[i])
             # Add vertical lines at the events
             for event, label in zip(event_x, event_y):
@@ -523,8 +546,8 @@ class Experiment:
 
 def main():
 
-    # TODO smooth wrenches v
-    # TODO Plot Moments
+    # TODO remove bias in all wrench
+    # TODO smooth wrenches
     # TODO PLots for different surface finishes - other experiment
     # TODO Deal with the videos and images
 
@@ -569,7 +592,7 @@ def main():
 
                 # 2. Turn Bag into csvs if needed
                 # Comment if it is already done
-                # bag_to_csvs(file + ".bag")
+                bag_to_csvs(file + ".bag")
 
                 # 3. Read attributes from 'json' files
                 metadata = read_json(file + ".json")
@@ -617,7 +640,7 @@ def main():
             noises_zforce_stds.append(round(final_zforce_std, 2))
 
         # --- Once all values are collected for all noises, print and plot
-        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means, noises_vacuum_stds, pressure, radius, 'true')
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means, noises_vacuum_stds, pressure, radius, 'false')
 
         # plt.show()
 
