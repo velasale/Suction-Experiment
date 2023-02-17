@@ -180,10 +180,12 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, r
         title = "Cartesian noise in z, for %.2f mm diameter" % (2000*radius)
         plt.xlabel("z-noise [m]")
 
-    plt.ylabel("Vacuum [hPa]")
-    plt.ylim([-1000, 0])
-    # plt.ylabel("Force [N]")
-    # plt.ylim([0, 7])
+    # plt.ylabel("Vacuum [hPa]")
+    # plt.ylim([-1000, 0])
+    plt.ylabel("Force [N]")
+    plt.ylim([0, 5])
+    # plt.ylabel("Torque [Nm]")
+    # plt.ylim([0, 0.5])
     plt.xlim([0, 0.030])
     plt.legend()
     plt.grid()
@@ -599,8 +601,8 @@ def noise_experiments(exp_type="vertical"):
     # exp_type = "horizontal"
 
     # --- Controlled variables ---
-    radius = 0.0425
-    # radius = 0.0375
+    # radius = 0.0425
+    radius = 0.0375
     pressures = [50, 60, 70, 80]
     n_noises = 10
     n_reps = 3
@@ -614,6 +616,10 @@ def noise_experiments(exp_type="vertical"):
         noises_znoises = []
         noises_zforce_means = []
         noises_zforce_stds = []
+        noises_xforce_means = []
+        noises_xforce_stds = []
+        noises_ytorque_means = []
+        noises_ytorque_stds = []
 
         # --- Sweep all the noises ---
         for noise in range(n_noises):
@@ -623,6 +629,9 @@ def noise_experiments(exp_type="vertical"):
             reps_vacuum_means = []
             reps_vacuum_stds = []
             reps_zforce_max = []
+            reps_xforce_max = []
+            reps_ytorque_max = []
+            reps_ytorque_max = []
 
             # --- Sweep all repetitions ---
             for rep in range(n_reps):
@@ -634,7 +643,7 @@ def noise_experiments(exp_type="vertical"):
 
                 # 2. Turn Bag into csvs if needed
                 # Comment if it is already done
-                bag_to_csvs(file + ".bag")
+                # bag_to_csvs(file + ".bag")
 
                 # 3. Read attributes from 'json' files
                 metadata = read_json(file + ".json")
@@ -646,8 +655,8 @@ def noise_experiments(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                experiment.plots_stuff()
-                plt.show()
+                # experiment.plots_stuff()
+                # plt.show()
 
                 # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:
@@ -659,6 +668,8 @@ def noise_experiments(exp_type="vertical"):
                 reps_vacuum_means.append(round(experiment.steady_vacuum_mean, 2))
                 reps_vacuum_stds.append(round(experiment.steady_vacuum_std, 4))
                 reps_zforce_max.append(experiment.max_detach_zforce)
+                reps_xforce_max.append(experiment.max_detach_xforce)
+                reps_ytorque_max.append(experiment.max_detach_ytorque)
 
             # --- Once all values are gathered for all repetitions, obtain the mean values
             if len(reps_vacuum_means) == 0:
@@ -668,6 +679,10 @@ def noise_experiments(exp_type="vertical"):
             final_vacuum_mean = np.mean(reps_vacuum_means)
             final_zforce_mean = np.mean(reps_zforce_max)
             final_zforce_std = np.std(reps_zforce_max)
+            final_xforce_mean = np.mean(reps_xforce_max)
+            final_xforce_std = np.std(reps_xforce_max)
+            final_ytorque_mean = np.mean(reps_ytorque_max)
+            final_ytorque_std = np.std(reps_ytorque_max)
 
             mean_stds = 0
             for i in range(len(reps_vacuum_stds)):
@@ -680,9 +695,15 @@ def noise_experiments(exp_type="vertical"):
             noises_znoises.append(round(final_z_noise, 4))
             noises_zforce_means.append(round(final_zforce_mean, 2))
             noises_zforce_stds.append(round(final_zforce_std, 2))
+            noises_xforce_means.append(round(final_xforce_mean, 2))
+            noises_xforce_stds.append(round(final_xforce_std, 2))
+            noises_ytorque_means.append(round(final_ytorque_mean, 2))
+            noises_ytorque_stds.append(round(final_ytorque_std, 2))
 
         # --- Once all values are collected for all noises, print and plot
-        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means, noises_vacuum_stds, pressure, radius, 'false')
+        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means, noises_vacuum_stds, pressure, radius, 'false')
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_xforce_means, noises_xforce_stds, pressure,
+                      radius, 'false')
 
         # plt.show()
 
@@ -762,8 +783,8 @@ def main():
     # TODO Deal with the videos and images
     # TODO Interpret moments. Consider that the lever is the height of the rig
 
-    # noise_experiments("vertical")
-    simple_suction_experiment()
+    noise_experiments("horizontal")
+    # simple_suction_experiment()
 
 
 if __name__ == '__main__':

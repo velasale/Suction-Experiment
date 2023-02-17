@@ -710,7 +710,6 @@ def main():
 
     # TODO fix camera issue: images are B&W
 
-
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
     #suction_experiment.go_preliminary_position()
