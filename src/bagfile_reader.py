@@ -697,7 +697,7 @@ def simple_suction_experiment():
     surfaces = ['Real_Apple', 'Gloss_Fake_Apple', '3DPrinted_with_Primer', '3DPrinted_with_Primer_85mm']
     n_reps = 5
 
-    # figure, axis = plt.subplots(1, 4, figsize=(10, 5))
+    figure, axis = plt.subplots(1, 4, figsize=(10, 5))
 
     # --- Sweep all pressures ---
     for pressure, ctr in zip(pressures, range(len(pressures))):
@@ -733,8 +733,8 @@ def simple_suction_experiment():
                 experiment.get_steady_vacuum('Steady', "Vacuum Off")
 
                 # 6. Plot each experiment if needed
-                experiment.plot_only_pressure()
-                plt.show()
+                # experiment.plot_only_pressure()
+                # plt.show()
 
                 # 7. Gather features from all reps.
                 reps_min_vacuums.append(min(experiment.steady_pressure_values))
@@ -743,12 +743,12 @@ def simple_suction_experiment():
             surfaces_min_vacuums.append(reps_min_vacuums)
 
         # Finally plot valus for the current pressure
-        # axis[ctr].boxplot(surfaces_min_vacuums)
-        # axis[ctr].set_ylim([-1000, -600])
-        # axis[ctr].set_xticklabels(surfaces, rotation=45, fontsize=8)
-        # axis[ctr].set_title('FP: %.0d [PSI]' % pressure)
-        # axis[ctr].set_xlabel('Surface')
-        # axis[ctr].grid()
+        axis[ctr].boxplot(surfaces_min_vacuums)
+        axis[ctr].set_ylim([-1000, -600])
+        axis[ctr].set_xticklabels(['Real', 'Fake', '3DwithPrimer1', '3DwithPrimer2'], rotation=30, fontsize=8)
+        axis[ctr].set_title('FP: %.0d [PSI]' % pressure)
+        axis[ctr].set_xlabel('Surface')
+        axis[ctr].grid()
 
         # Create a plot for each pressure
         # print(plot_title, surfaces_min_vacuums)
