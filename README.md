@@ -49,19 +49,11 @@ sudo apt install ros-noetic-moveit
 # Running
 1. Upload code into **arduino board**.
 2. Check the port name, and make sure it matches the one written at line 50 of **serial_node.py**.
-3. Launch the lab setup in terminal one:
+3. Launch the lab setup in 1st terminal:
 ```console
-roslaunch apple_proxy pickApp.launch
+roslaunch suctioncup_experiment.launch
 ```
-4. Run RosSerial node in terminal two
-```console
-rosrun rosserial_python serial_node.py
-```
-4. Run OpenCv streamng in terminal three
-```console
-roslaunch video_stream_opencv camera.launch video_stream_provider:=/dev/video2
-```
-5. Run Experiment code in terminal three
+4. Run experiment code in 2nd terminal:
 ```console
 python3 suction_experiment.py
  ```
