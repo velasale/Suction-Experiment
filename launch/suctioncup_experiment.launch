@@ -19,7 +19,7 @@
   </include>
 
 
-  <!-- Launch Ros Serial -->
+  <!-- Launch ROS Serial -->
   <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
     <param name="port" value="/dev/ttyACM0" />
     <param name="baud" value="57600" />

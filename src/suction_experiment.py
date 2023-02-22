@@ -390,7 +390,7 @@ class SuctionExperiment():
         self.SUCTION_CUP_SPEC = 0.0122
         self.SUCTION_CUP_RADIUS = 0.021 / 2
         self.OFFSET = 0.02
-        self.SPHERE_RADIUS = 0.085/2
+        self.SPHERE_RADIUS = 0.075/2
         self.SURFACE = "3DprintedPLA"
 
         ## Experiment Variables
@@ -441,7 +441,7 @@ class SuctionExperiment():
 
         # --- Place a marker with text in RVIZ
         text = "Going to an IDEAL Starting Pose"
-        self.place_marker_text(0, 0, 1.5, 0.1, text)
+        self.place_marker_text(0, 0, 1.5, 0.05, text)
 
         # --- ROS tool for transformations among c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -489,7 +489,7 @@ class SuctionExperiment():
         
         # --- Place a marker with text in RVIZ
         text = "Step No " + str(self.step) + "\nAdding cartesian noise"
-        self.place_marker_text(0, 0, 1.5, 0.1, text)
+        self.place_marker_text(0, 0, 1.5, 0.05, text)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()
@@ -536,7 +536,7 @@ class SuctionExperiment():
 
         # --- Place a marker with text in RVIZ
         text = "Moving in Z-Axis"
-        self.place_marker_text(0, 0, 1.5, 0.1, text)
+        self.place_marker_text(0, 0, 1.5, 0.05, text)
 
         # --- ROS tool for transformation across c-frames
         tf_buffer = tf2_ros.Buffer()

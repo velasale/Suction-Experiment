@@ -525,6 +525,7 @@ class Experiment:
             axis[i, 0].grid()
             axis[i, 0].set_ylabel(ylabels[i])
             axis[i, 0].set_ylim(ylims[i])
+            axis[i, 0].fill_between()
             # Add vertical lines at the events
             for event, label in zip(event_x, event_y):
                 axis[i, 0].axvline(x=event, color='black', linestyle='dotted', linewidth=1)
@@ -655,8 +656,8 @@ def noise_experiments(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                # experiment.plots_stuff()
-                # plt.show()
+                experiment.plots_stuff()
+                plt.show()
 
                 # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:
@@ -784,6 +785,7 @@ def main():
     # TODO Interpret moments. Consider that the lever is the height of the rig
 
     noise_experiments("horizontal")
+    # noise_experiments("vertical")
     # simple_suction_experiment()
 
 
