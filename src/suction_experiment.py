@@ -402,7 +402,7 @@ class SuctionExperiment():
         self.previous_pose = tf2_geometry_msgs.PoseStamped()
         self.step = 0
 
-    # Functions to move
+    # --- Moving Functions ---
 
     def go_preliminary_position(self):
         """ This function is to avoid the robot from travelling around weird points"""       
@@ -575,7 +575,7 @@ class SuctionExperiment():
         
         return success
 
-    # Additional functins
+    # --- Additional functions ---
        
     def place_marker_text(self, x, y, z, scale, text):
         """
