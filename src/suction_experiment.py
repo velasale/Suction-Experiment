@@ -360,38 +360,34 @@ def calibrate_zero(suction_experiment):
         if jog == 'w':
             "Move in +y"
             suction_experiment.add_cartesian_noise(0, +delta, 0)
-            dy += 1
-            print(dy)
+            dy += 1            
 
         elif jog == 's':
             "Move in -y"
             suction_experiment.add_cartesian_noise(0, -delta, 0)
             dy -= 1
-            print(dy)
         
-        elif jog =='a':
+        elif jog =='d':
             "Move in -x"
             suction_experiment.add_cartesian_noise(-delta, 0, 0)
             dx += 1
-            print(dx)
         
-        elif jog == 'd':
+        elif jog == 'a':
             "Move in +x"
             suction_experiment.add_cartesian_noise(+delta, 0, 0)
             dx -= 1
-            print(dx)
 
-        elif jog =='z':
+        elif jog =='q':
             "Move in -z"
             suction_experiment.add_cartesian_noise(0, 0, -delta)
             dz += 1
-            print(dz)
         
-        elif jog == 'q':
+        elif jog == 'z':
             "Move in +z"
             suction_experiment.add_cartesian_noise(0, 0, +delta)
             dz -= 1
-            print(dz)
+        
+        print("dx= %.0d, dy= %.0d,  dz= %0.d" % (dx, dy, dz))
     
     
 
