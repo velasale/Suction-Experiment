@@ -6,6 +6,7 @@ import matplotlib.pyplot as pp
 import numpy as np
 from numpy import pi, cos, sin, arccos, arange
 import os
+import keyboard
 from random import random
 import rospy
 import time
@@ -338,6 +339,61 @@ def simple_cup_experiment(suction_experiment):
         # ---- Ffinally save the metadata
         suction_experiment.save_metadata(filename)
         print("Saving Metadata")     
+
+
+def calibrate_zero(suction_experiment):
+    
+    suction_experiment.go_to_starting_position()
+    delta = 1/1000
+
+    # ask user to hit one arrow, and the move
+    print("Type 'w' = +x, 's' = -x, 'a' = -y, 'd' = +y, 'q' = +z, 'z' = -z")
+    
+    dx = 0
+    dy = 0
+    dz = 0
+
+    jog= 'q'
+    while jog != 'Esc':
+        jog = input()
+
+        if jog == 'w':
+            "Move in +y"
+            suction_experiment.add_cartesian_noise(0, +delta, 0)
+            dy += 1
+            print(dy)
+
+        elif jog == 's':
+            "Move in -y"
+            suction_experiment.add_cartesian_noise(0, -delta, 0)
+            dy -= 1
+            print(dy)
+        
+        elif jog =='a':
+            "Move in -x"
+            suction_experiment.add_cartesian_noise(-delta, 0, 0)
+            dx += 1
+            print(dx)
+        
+        elif jog == 'd':
+            "Move in +x"
+            suction_experiment.add_cartesian_noise(+delta, 0, 0)
+            dx -= 1
+            print(dx)
+
+        elif jog =='z':
+            "Move in -z"
+            suction_experiment.add_cartesian_noise(0, 0, -delta)
+            dz += 1
+            print(dz)
+        
+        elif jog == 'q':
+            "Move in +z"
+            suction_experiment.add_cartesian_noise(0, 0, +delta)
+            dz -= 1
+            print(dz)
+    
+    
 
 
 class SuctionExperiment():
@@ -716,9 +772,9 @@ def main():
 
     # Step 2: Get some info from the user
     print("\n\n ***** Suction Cups Experiments *****")
-    print("a. Type of Experiment (vertical, horizontal or simple_suction):")
+    print("a. Type of Experiment (vertical, horizontal, simple_suction, or calibrate_zero):")
     experiment = ''
-    while ((experiment != "vertical") and (experiment != "horizontal") and (experiment != "simple_suction")):
+    while ((experiment != "vertical") and (experiment != "horizontal") and (experiment != "simple_suction") and (experiment != "calibrate_zero")):
         experiment = input()
         print(experiment)
     suction_experiment.experiment_type = str(experiment)
@@ -745,6 +801,11 @@ def main():
         # Perform x noise experiment
         suction_experiment.experiment_type = "simple_suction"
         simple_cup_experiment(suction_experiment) 
+    
+    elif experiment == "calibrate_zero":
+        # Calibrate the zero location - upper quadrant of sphere"
+        suction_experiment.experiment_type = experiment
+        calibrate_zero(suction_experiment)
 
 
 if __name__ == '__main__':
