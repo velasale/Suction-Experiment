@@ -347,14 +347,14 @@ def calibrate_zero(suction_experiment):
     delta = 1/1000
 
     # ask user to hit one arrow, and the move
-    print("Type 'w' = +x, 's' = -x, 'a' = -y, 'd' = +y, 'q' = +z, 'z' = -z")
+    print("Type 'w' = +x, 's' = -x, 'a' = -y, 'd' = +y, 'q' = +z, 'z' = -z, or 'exit'")
     
     dx = 0
     dy = 0
     dz = 0
 
     jog= 'q'
-    while jog != 'Esc':
+    while jog != 'exit':
         jog = input()
 
         if jog == 'w':
