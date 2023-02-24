@@ -798,8 +798,8 @@ def noise_experiments(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                # experiment.plots_stuff()
-                # plt.show()
+                experiment.plots_stuff()
+                plt.show()
 
                 # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:

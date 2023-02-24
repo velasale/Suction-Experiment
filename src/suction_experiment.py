@@ -55,16 +55,16 @@ def start_saving_rosbag(name="trial"):
     """Start saving a bagfile"""
     
     filename = name
-    # topics = "/gripper/pressure" \
-    #             + " wrench" \
-    #             + " joint_states" \
-    #             + " experiment_steps" \
-    #             + " /camera/image_raw"
-
     topics = "/gripper/pressure" \
                 + " wrench" \
                 + " joint_states" \
-                + " experiment_steps"
+                + " experiment_steps" \
+                + " /camera/image_raw"
+
+    # topics = "/gripper/pressure" \
+    #             + " wrench" \
+    #             + " joint_states" \
+    #             + " experiment_steps"
 
     command = "rosbag record -O " + filename + " " + topics    
     command = shlex.split(command)
@@ -92,7 +92,7 @@ def service_call(service):
 def z_noise_experiment(suction_experiment):   
 
     steps = 10
-    noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
+    noise_res = 1.2 * suction_experiment.SUCTION_CUP_SPEC / steps
 
     # Step 2: Add noise
     for step in range(steps):
@@ -389,9 +389,7 @@ def calibrate_zero(suction_experiment):
         
         print("dx= %.0d, dy= %.0d,  dz= %0.d" % (dx, dy, dz))
     
-    
-
-
+   
 class SuctionExperiment():
 
     def __init__(self):
@@ -438,11 +436,13 @@ class SuctionExperiment():
         self.pressureAtCompressor = 100
         self.pressureAtValve = 50
         
+        # Source https://www.piab.com/inriverassociations/0206204/#specifications
         self.SUCTION_CUP_NAME = "Suction cup F-BX20 Silicone"
-        self.SUCTION_CUP_SPEC = 0.0122
+        self.SUCTION_CUP_SPEC = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
-        self.OFFSET = 0.02
-        self.SPHERE_RADIUS = 0.075/2
+
+        self.OFFSET = 0.02     # This should be checked with the calibration_zero function. Look at 'dz'
+        self.SPHERE_RADIUS = 0.085/2
         self.SURFACE = "3DprintedPLA"
 
         ## Experiment Variables
@@ -506,7 +506,9 @@ class SuctionExperiment():
 
         goal_pose.pose.position.x = 0.115/2
         goal_pose.pose.position.y = 0.115/2
-        goal_pose.pose.position.z = - self.OFFSET - (self.SPHERE_RADIUS - 0.075/2)
+        z_calibration = 1/1000      # This value comes after running the calibration method and measruing 'dz', which should be the ofsset value once the cup just touches the surface
+        goal_pose.pose.position.z = - (self.OFFSET + (self.SPHERE_RADIUS - 0.075/2) + z_calibration)
+        #goal_pose.pose.position.z = - self.OFFSET
        
         roll = 0
         pitch = 0
@@ -768,11 +770,10 @@ def main():
 
     # Step 2: Get some info from the user
     print("\n\n ***** Suction Cups Experiments *****")
-    print("a. Type of Experiment (vertical, horizontal, simple_suction, or calibrate_zero):")
+    print("a. Type Experiment: 1 (zNoise), 2 (xNoise), 3 (simple suction), or 4 (calibrate zero)")
     experiment = ''
-    while ((experiment != "vertical") and (experiment != "horizontal") and (experiment != "simple_suction") and (experiment != "calibrate_zero")):
-        experiment = input()
-        print(experiment)
+    while ((experiment != "1") and (experiment != "2") and (experiment != "3") and (experiment != "4")):
+        experiment = input()        
     suction_experiment.experiment_type = str(experiment)
 
     print("b. Type of Surface:")
@@ -783,22 +784,22 @@ def main():
     suction_experiment.pressureAtValve = int(input())    
 
     # Step 3: Run the experiment
-    if experiment == "vertical":
+    if experiment == "1":
         # Perform the z_noise experiment
         suction_experiment.experiment_type = "vertical"
         z_noise_experiment(suction_experiment)      
     
-    elif experiment == "horizontal":
+    elif experiment == "2":
         # Perform x noise experiment
         suction_experiment.experiment_type = "horizontal"
         x_noise_experiment(suction_experiment)    
     
-    elif experiment == "simple_suction":
+    elif experiment == "3":
         # Perform x noise experiment
         suction_experiment.experiment_type = "simple_suction"
         simple_cup_experiment(suction_experiment) 
     
-    elif experiment == "calibrate_zero":
+    elif experiment == "4":
         # Calibrate the zero location - upper quadrant of sphere"
         suction_experiment.experiment_type = experiment
         calibrate_zero(suction_experiment)
