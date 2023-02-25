@@ -55,16 +55,17 @@ def start_saving_rosbag(name="trial"):
     """Start saving a bagfile"""
     
     filename = name
-    topics = "/gripper/pressure" \
-                + " wrench" \
-                + " joint_states" \
-                + " experiment_steps" \
-                + " /camera/image_raw"
 
     # topics = "/gripper/pressure" \
     #             + " wrench" \
     #             + " joint_states" \
-    #             + " experiment_steps"
+    #             + " experiment_steps" \
+    #             + " /camera/image_raw"
+
+    topics = "/gripper/pressure" \
+                + " wrench" \
+                + " joint_states" \
+                + " experiment_steps"
 
     command = "rosbag record -O " + filename + " " + topics    
     command = shlex.split(command)
@@ -91,8 +92,8 @@ def service_call(service):
 
 def z_noise_experiment(suction_experiment):   
 
-    steps = 10
-    noise_res = 1.2 * suction_experiment.SUCTION_CUP_SPEC / steps
+    steps = 12
+    noise_res = 1.3 * suction_experiment.SUCTION_CUP_SPEC / steps
 
     # Step 2: Add noise
     for step in range(steps):
@@ -175,7 +176,7 @@ def z_noise_experiment(suction_experiment):
 def x_noise_experiment(suction_experiment):
 
     steps = 10
-    noise_res = (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
+    noise_res = 1.3 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
 
     # Step 2: Add noise
     for step in range(steps):
@@ -183,7 +184,7 @@ def x_noise_experiment(suction_experiment):
         print("\n **** Step %d of %d ****" %(step, steps))
 
         suction_experiment.noise_x_command = 1 * noise_res * step
-        noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
+        noise_for_filename = round(suction_experiment.noise_x_command * 1000, 2)
         suction_experiment.noise_z_command = suction_experiment.calc_vertical_noise()
 
         # --- Move to Starting position
@@ -441,7 +442,7 @@ class SuctionExperiment():
         self.SUCTION_CUP_SPEC = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
-        self.OFFSET = 0.02     # This should be checked with the calibration_zero function. Look at 'dz'
+        self.OFFSET = 0.01     # This should be checked with the calibration_zero function. Look at 'dz'
         self.SPHERE_RADIUS = 0.085/2
         self.SURFACE = "3DprintedPLA"
 
