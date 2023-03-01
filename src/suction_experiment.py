@@ -56,16 +56,12 @@ def start_saving_rosbag(name="trial"):
     
     filename = name
 
-    # topics = "/gripper/pressure" \
-    #             + " wrench" \
-    #             + " joint_states" \
-    #             + " experiment_steps" \
-    #             + " /camera/image_raw"
-
     topics = "/gripper/pressure" \
                 + " wrench" \
                 + " joint_states" \
+                + " /usb_cam/image_raw" \
                 + " experiment_steps"
+
 
     command = "rosbag record -O " + filename + " " + topics    
     command = shlex.split(command)

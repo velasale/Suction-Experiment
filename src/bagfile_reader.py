@@ -63,6 +63,9 @@ def read_json(file):
         experiment.x_noise = abs(json_data["robotInfo"]["x noise real [m]"])
         experiment.z_noise = abs(json_data["robotInfo"]["z noise real [m]"])
 
+        experiment.x_noise_command = abs(json_data["robotInfo"]["x noise command [m]"])
+        experiment.z_noise_command = abs(json_data["robotInfo"]["z noise command [m]"])
+
         try:
             experiment.pressure = json_data["gripperInfo"]["pressureAtValve [PSI]"]
         except KeyError:
@@ -111,16 +114,16 @@ def find_file(type, radius, pressure, noise, rep, surface):
     location = os.path.dirname(os.getcwd())
 
     if type == "horizontal":
-        folder = "/data/x_noise/rep" + str(rep + 1) + "/"
+        folder = "/data/DATASET2/x_noise/rep" + str(rep + 1) + "/"
         filename = "horizontal_#" + str(noise) + \
                    "_pres_" + str(pressure) + \
-                   "_surface_3DPrinted_with_Primer" + \
+                   "_surface_3DPrintedPrimer85" + \
                    "_radius_" + str(radius)
     elif type == "vertical":
-        folder = "/data/z_noise/rep" + str(rep + 1) + "/"
+        folder = "/data/DATASET2/z_noise/rep" + str(rep + 1) + "/"
         filename = "vertical_#" + str(noise) + \
                    "_pres_" + str(pressure) + \
-                   "_surface_3DPrinted_with_Primer" + \
+                   "_surface_3DPrintedPrimer85" + \
                    "_radius_" + str(radius)
     elif type == "simple_suction":
         folder = "/data/simple_suction/"
@@ -143,6 +146,8 @@ def find_file(type, radius, pressure, noise, rep, surface):
 
     if only_filename == "no_match":
         file = "no_match"
+        print("\n", (rep+1))
+        print("Couldn't find :", filename)
     else:
         file = location + folder + only_filename
 
@@ -183,11 +188,11 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, r
 
     # plt.ylabel("Vacuum [hPa]")
     # plt.ylim([-1000, 0])
-    plt.ylabel("Force [N]")
-    plt.ylim([0, 5])
+    plt.ylabel("Force z [N]")
+    plt.ylim([-1, 7])
     # plt.ylabel("Torque [Nm]")
     # plt.ylim([0, 0.5])
-    plt.xlim([0, 0.030])
+    plt.xlim([0, 0.040])
     plt.legend()
     plt.grid()
     plt.title(title)
@@ -227,7 +232,7 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
         plt.plot(x, z, marker="o", markersize=5, markeredgecolor="black", markerfacecolor="black")
 
     # # Plot arrows in the direction of N and Tan, with length proportional to the magnitude
-    # for x in x_noises:
+    # for x, fn, ft in zip(x_noises, n:
     #     z = (radius ** 2 - x ** 2) ** 0.5
     #     theta = math.acos(x/radius)
     #
@@ -269,6 +274,8 @@ class Experiment:
         self.pressure = pressure
         self.surface = surface
         self.surface_radius = radius
+        self.z_noise_command = 0
+        self.x_noise_command = 0
         self.z_noise = z_noise
         self.x_noise = x_noise
         self.time_stamp = []
@@ -348,8 +355,10 @@ class Experiment:
         self.check_errors()
 
     def get_normal_angle(self):
-
-        self.normal_angle = math.acos(self.x_noise / self.surface_radius)
+        try:
+            self.normal_angle = math.acos(self.x_noise / self.surface_radius)
+        except ValueError:
+            ...
 
     def normal_and_tangent_forces(self):
         """Method to transform the Forces at the XZ cframe into a Normal-Tangential Cframe"""
@@ -563,6 +572,11 @@ class Experiment:
         if abs(force_time - pressure_time) > time_range:
             self.errors.append("One of the topics wasn't recorded properly")
 
+        # 1.3. When for some reason the arm didn't move to the starting position, hence the x_noise was doubled
+        # this is checked with the x_noise vs radius
+        if abs(self.x_noise - self.x_noise_command) > 0.002 or abs(self.z_noise - self.z_noise_command) > 0.002:
+            self.errors.append("The noise was't addede properly")
+
         # 2. Cases due to the suction cup:
         # 2.1. When suction cup collapses. This shows an increase in vacuum after retrieving
         pressure_range = 50
@@ -666,7 +680,7 @@ class Experiment:
         yvalues = [ztorque_values, ytorque_values, xtorque_values, pressure_values]
         xvalues = [force_time, force_time, force_time, pressure_time]
         ylabels = ["zTorque [Nm]", "yTorque [Nm]", "xTorque [Nm]", "Pressure [hPa]"]
-        ylims = [[-0.3, 0.3], [-0.3, 0.3], [-0.3, 0.3], [0, 1100]]
+        ylims = [[-0.35, 0.35], [-0.35, 0.35], [-0.35, 0.35], [0, 1100]]
         colors = ['blue', 'green', 'red', 'black']
 
         for i in range(len(axis)):
@@ -744,11 +758,12 @@ def noise_experiments(exp_type="vertical"):
     # exp_type = "horizontal"
 
     # --- Controlled variables ---
-    # radius = 0.0425
-    radius = 0.0375
-    pressures = [50, 60, 70, 80]
-    n_noises = 10
-    n_reps = 3
+    radius = 0.0425
+    # radius = 0.0375
+    # pressures = [50, 60, 70, 80]    #only in dataset1 we did @80psi
+    pressures = [40, 50, 60, 70]
+    n_noises = 12
+    n_reps = 4
 
     # --- Sweep all the pressures ---
     for pressure in pressures:
@@ -782,7 +797,7 @@ def noise_experiments(exp_type="vertical"):
                 # 1. Find file
                 file, only_filename = find_file(exp_type, radius, pressure, noise, rep, 'surface')
                 if file == "no_match":
-                    break
+                    continue
 
                 # 2. Turn Bag into csvs if needed
                 # Comment if it is already done
@@ -798,12 +813,12 @@ def noise_experiments(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                experiment.plots_stuff()
-                plt.show()
+                # experiment.plots_stuff()
+                # plt.show()
 
                 # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:
-                    break
+                    continue
 
                 # 7. Gather features from all the repetitions of the experiment
                 reps_xnoises.append(experiment.x_noise)
@@ -816,7 +831,7 @@ def noise_experiments(exp_type="vertical"):
 
             # --- Once all values are gathered for all repetitions, obtain the mean values
             if len(reps_vacuum_means) == 0:
-                break
+                continue
             final_x_noise = np.mean(reps_xnoises)
             final_z_noise = np.mean(reps_znoises)
             final_vacuum_mean = np.mean(reps_vacuum_means)
@@ -846,10 +861,11 @@ def noise_experiments(exp_type="vertical"):
         # --- Once all values are collected for all noises, print and plot
         # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
         #               noises_vacuum_stds, pressure, radius, 'false')
-        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_xforce_means,
-        #               noises_xforce_stds, pressure, radius, 'false')
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
+                      noises_zforce_stds, pressure, radius, 'false')
 
         print(noises_xnoises)
+        print(noises_zforce_means)
         # # Save lists into csvs
         # filename = str(pressure) + "PSI_xnoises"
         # with open(filename, 'wb') as f:
@@ -857,9 +873,9 @@ def noise_experiments(exp_type="vertical"):
         #     for item in noises_xnoises:
         #         write.writerow(item)
 
-        circle_plots(noises_xnoises, 1, radius, noises_xforce_means, noises_zforce_means, pressure)
+        # circle_plots(noises_xnoises, 1, radius, noises_xforce_means, noises_zforce_means, pressure)
 
-        plt.show()
+        # plt.show()
 
     plt.grid()
     plt.show()
@@ -937,7 +953,7 @@ def main():
     # TODO Deal with the videos and images
     # TODO Interpret moments. Consider that the lever is the height of the rig
 
-    noise_experiments("horizontal")
+    noise_experiments()
 
     # circle_plots(1,1,1)
     # noise_experiments("vertical")
