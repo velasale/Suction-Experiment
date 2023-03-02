@@ -20,8 +20,12 @@ replace `std::memcpy()` with `memcpy()`
 ```console
 mkdir -p your_ws/src && cd catkin_ws
 ```
+3. Don't forget to source the workspace   
+`gedit ~/.bashrc` and add this line at the end `source ~/<your_ws>/devel/setup.bash` 
 
-3. Install **rosserial** package  
+### ROS - Serial
+
+4. Install **rosserial** package  
 ```console
 cd <your_ws>/src  
 git clone https://github.com/ros-drivers/rosserial.git  
@@ -29,7 +33,10 @@ cd <your_ws>
 catkin_make
 ```
 
-4. Install **opencv** package
+### ROS - Camera
+Install **opencv** or **usb_cam**. The latter allows to adjust color parameters (e.g. saturation, contrast, brightness)
+
+5. Install **opencv** package
 ```console
 cd <your_ws>/src 
 git clone https://github.com/ros-drivers/video_stream_opencv
@@ -37,11 +44,17 @@ cd <your_ws>
 catkin_make
 ```
 
+6. Install **usb_cam** package if you have issues with Color
+```console
+cd <your_ws>/src
+git clone https://github.com/ros-drivers/usb_cam 
+cd <your_ws>
+catkin_make
+```
 
-5. Don't forget to source the workspace   
-`gedit ~/.bashrc` and add this line at the end `source ~/<your_ws>/devel/setup.bash` 
+### ROS - MoveIt
 
-5. Install **moveit** package
+7. Install **moveit** package
 ```console
 sudo apt install ros-noetic-moveit
 ```
