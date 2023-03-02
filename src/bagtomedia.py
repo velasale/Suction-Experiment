@@ -42,32 +42,30 @@ def bagToVideo(input_dir, bag_file, output_dir, cam_topic, counter):
         img = bridge.imgmsg_to_cv2(msg, "bgr8")
         h, w, _ = img.shape
 
-        # print(bag.get_type_and_topic_info()[1][cam_topic][3])
-        # print(bag.get_type_and_topic_info())
         if out is None:
-            out = cv2.VideoWriter(output_dir + str(counter) + '.avi', cv2.VideoWriter_fourcc(*'MP4V'), 30, (w, h))
+            fps = bag.get_type_and_topic_info()[1][cam_topic][3]
+            out = cv2.VideoWriter(output_dir + str(counter) + '.avi', cv2.VideoWriter_fourcc(*'MP4V'), fps, (w, h))
         out.write(img)
 
     bag.close()
     out.release()
 
 
-
 def main():
-    """Extract a folder of images from a rosbag.
+    """Extract media from camera topic in rosbag.
     """
 
-    # Sweep folder location with bagfiles
+    # Define folders
     location = os.path.dirname(os.getcwd())
     in_folder = '/data/data_with_video/'
     out_folder = '/data/data_with_video/media/'
-    image_topic = '/usb_cam/image_raw/'
+    image_topic = '/usb_cam/image_raw'
 
     input_folder = location + in_folder
     output_folder = location + out_folder
 
+    # Sweep folder location with bagfiles
     counter = 0
-
     for file in os.listdir(input_folder):
         if file.endswith(".bag"):
             output_dir = output_folder + "pngs" + str(counter) + "/"
