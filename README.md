@@ -4,7 +4,7 @@ Experiment to test the performance of the suction cup when cartesian and angular
 
 # Basic Installation
 
-The following steps were performed under Ubuntu 20.04.5 LTS (Focal Fossa)
+The following steps were performed under Ubuntu 20.04.5 LTS (Focal Fossa)(https://www.releases.ubuntu.com/focal/)
 
 ### Arduino  
 1. Install Arduino  
