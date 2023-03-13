@@ -113,6 +113,8 @@ def find_file(type, radius, pressure, noise, rep, surface):
     # A. Build the name of the experiment
     location = os.path.dirname(os.getcwd())
 
+    location = "/home/alejo/Documents"
+
     if type == "horizontal":
         folder = "/data/DATASET2/x_noise/rep" + str(rep + 1) + "/"
         filename = "horizontal_#" + str(noise) + \
@@ -256,7 +258,6 @@ def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
 class Experiment:
     """Class to define experiments as objects.
     Each experiment has properties from the json file.
-
     """
     def __init__(self, id=0,
                  exp_type="vertical",
@@ -953,11 +954,11 @@ def main():
     # TODO Deal with the videos and images
     # TODO Interpret moments. Consider that the lever is the height of the rig
 
-    noise_experiments()
+    # noise_experiments()
 
     # circle_plots(1,1,1)
     # noise_experiments("vertical")
-    # simple_suction_experiment()
+    simple_suction_experiment()
 
 
 if __name__ == '__main__':
