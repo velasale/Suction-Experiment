@@ -81,13 +81,13 @@ def main():
         if file.endswith(".bag"):
             # output_dir = output_folder + "pngs" + str(counter) + "/"
             only_filename = file.split(".bag")[0]
-            output_dir = output_folder + only_filename + "/"
+            output_dir = output_folder + only_filename + "/pngs/"
             os.makedirs(output_dir)
 
-            # Uncomment for PNGS
+            # Uncomment for PNGs
             bagToPng(input_folder, file, output_dir, image_topic)
 
-            # Uncommebt for AVIS
+            # Uncomment for AVIs
             # bagToVideo(input_folder, file, output_dir, image_topic, counter)
 
             counter += 1
