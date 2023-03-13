@@ -20,7 +20,6 @@ def bagToPng(input_dir, bag_file, output_dir, cam_topic):
     bridge = CvBridge()
     count = 0
     initial_time_stamp = 0.0
-    elapsed_time = 0.0
 
     for topic, msg, t in bag.read_messages(topics=[cam_topic]):
 
