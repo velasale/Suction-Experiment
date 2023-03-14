@@ -770,8 +770,9 @@ class Experiment:
         lst = os.listdir(location + filename + '/pngs')
         listop = []
         for i in lst:
-            x = i.split('.png')[0]
-            listop.append(int(x))
+            if i.endswith('.png'):
+                x = i.split('.png')[0]
+                listop.append(int(x))
         listop.sort()
 
         fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4.8))
@@ -790,7 +791,7 @@ class Experiment:
         for spine in ['top', 'right', 'left', 'bottom']:
             ax[1].spines[spine].set_visible(False)
 
-        out = None
+        # out = None
         for i in listop:
             # Vertical Line moving along the x axis
             x = i/1000
@@ -803,17 +804,16 @@ class Experiment:
             ax[1].add_artist(ab)
             plt.pause(0.025)
 
-            if out is None:
-                out = cv2.VideoWriter(location + filename + '/trial.avi', cv2.VideoWriter_fourcc(*'MP4V'), 40, (640, 480))
-
-            img_for_video = cv2.cvtColor(np.asarray(fig.canvas.buffer_rgba()), cv2.COLOR_RGBA2BGR)
-            out.write(img_for_video)
+            # if out is None:
+            #     out = cv2.VideoWriter(location + filename + '/trial.avi', cv2.VideoWriter_fourcc(*'MP4V'), 40, (640, 480))
+            # img_for_video = cv2.cvtColor(np.asarray(fig.canvas.buffer_rgba()), cv2.COLOR_RGBA2BGR)
+            # out.write(img_for_video)
 
             # Remove annotations to avoid RAM memory consumption
             ab.remove()
             line.remove()
 
-        out.release()
+        # out.release()
 
 
 def noise_experiments(exp_type="vertical"):
@@ -828,7 +828,13 @@ def noise_experiments(exp_type="vertical"):
     # radius = 0.0375
     # pressures = [50, 60, 70, 80]    #only in dataset1 we did @80psi
     pressures = [40, 50, 60, 70]
-    n_noises = 12
+
+    # Number of noise steps implemented for each direction
+    if exp_type == 'vertical':
+        n_noises = 12
+    else:
+        n_noises = 10
+
     n_reps = 4
 
     # --- Sweep all the pressures ---
@@ -879,8 +885,8 @@ def noise_experiments(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                experiment.plots_stuff()
-                plt.show()
+                # experiment.plots_stuff()
+                # plt.show()
 
                 # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:
@@ -930,8 +936,15 @@ def noise_experiments(exp_type="vertical"):
         suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
                       noises_zforce_stds, pressure, radius, 'false')
 
-        print(noises_xnoises)
-        print(noises_zforce_means)
+        print('\nFeed In Pressure: ', pressure)
+        print('zForce means: ', noises_zforce_means)
+        if exp_type == 'vertical':
+            print('zNoises: ', noises_znoises)
+        else:
+            print('xForce means: ', noises_xforce_means)
+            print('xNoises: ', noises_xnoises)
+
+
         # # Save lists into csvs
         # filename = str(pressure) + "PSI_xnoises"
         # with open(filename, 'wb') as f:
@@ -1045,11 +1058,11 @@ def main():
 
     # TODO Interpret moments. Consider that the lever is the height of the rig
 
-
     # circle_plots(1,1,1)
-    # noise_experiments("vertical")
+    noise_experiments('horizontal')
+    # noise_experiments('vertical')
     # simple_suction_experiment()
-    plot_and_video()
+    # plot_and_video()
 
 
 if __name__ == '__main__':
