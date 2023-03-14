@@ -85,24 +85,25 @@ def read_csvs(experiment, folder):
 
     # Sweep the csvs of each experiment
     for file in os.listdir(folder):
-        data_list = pd.read_csv(folder + "/" + file)
+        if file.endswith('.csv'):
+            data_list = pd.read_csv(folder + "/" + file)
 
-        if file == "gripper-pressure.csv":
-            experiment.pressure_time_stamp = data_list.iloc[:, 0].tolist()
-            experiment.pressure_values = data_list.iloc[:, 1].tolist()
+            if file == "gripper-pressure.csv":
+                experiment.pressure_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.pressure_values = data_list.iloc[:, 1].tolist()
 
-        if file == "rench.csv":
-            experiment.wrench_time_stamp = data_list.iloc[:, 0].tolist()
-            experiment.wrench_xforce_values = data_list.iloc[:, 5].tolist()
-            experiment.wrench_yforce_values = data_list.iloc[:, 6].tolist()
-            experiment.wrench_zforce_values = data_list.iloc[:, 7].tolist()
-            experiment.wrench_xtorque_values = data_list.iloc[:, 8].tolist()
-            experiment.wrench_ytorque_values = data_list.iloc[:, 9].tolist()
-            experiment.wrench_ztorque_values = data_list.iloc[:, 10].tolist()
+            if file == "rench.csv":
+                experiment.wrench_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.wrench_xforce_values = data_list.iloc[:, 5].tolist()
+                experiment.wrench_yforce_values = data_list.iloc[:, 6].tolist()
+                experiment.wrench_zforce_values = data_list.iloc[:, 7].tolist()
+                experiment.wrench_xtorque_values = data_list.iloc[:, 8].tolist()
+                experiment.wrench_ytorque_values = data_list.iloc[:, 9].tolist()
+                experiment.wrench_ztorque_values = data_list.iloc[:, 10].tolist()
 
-        if file == "xperiment_steps.csv":
-            experiment.event_time_stamp = data_list.iloc[:, 0].tolist()
-            experiment.event_values = data_list.iloc[:, 1].tolist()
+            if file == "xperiment_steps.csv":
+                experiment.event_time_stamp = data_list.iloc[:, 0].tolist()
+                experiment.event_values = data_list.iloc[:, 1].tolist()
 
     return experiment
 
@@ -750,6 +751,28 @@ class Experiment:
         plt.grid()
         plt.title(self.filename)
 
+    def plot_only_pressure_animated(self):
+        """Plots wrench (forces and moments) and pressure readings"""
+
+        pressure_time = self.pressure_elapsed_time
+        pressure_values = self.pressure_values
+
+        event_x = self.event_elapsed_time
+        event_y = self.event_values
+
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        line = ax.plot((pressure_time[0], pressure_time[1]), (pressure_values[0], pressure_values[1]), 'k-', linewidth=2)
+
+        plt.xlim(0, max(pressure_time))
+        plt.ylim(0, 1200)
+        plt.ion()
+        plt.show()
+
+        for i, serie in enumerate(pressure_values):
+            line = ax.plot((pressure_time[i], pressure_time[i+1]), (pressure_values[i], pressure_values[i+1]), 'k-', linewidth=2)
+            plt.gcf().canvas.draw()
+            plt.pause(0.001)
+
 
 def noise_experiments(exp_type="vertical"):
 
@@ -814,8 +837,8 @@ def noise_experiments(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                # experiment.plots_stuff()
-                # plt.show()
+                experiment.plots_stuff()
+                plt.show()
 
                 # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:
@@ -949,16 +972,46 @@ def simple_suction_experiment():
     plt.show()
 
 
+def plot_and_video():
+    """Method to run a vertical line on a plot and a video"""
+
+    # --- Give File
+    location = '/home/alejo/Documents/data/samples_with_camera/'
+    filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
+
+    # --- Open Bag file
+    # bag_to_csvs(location + filename + ".bag")
+
+    # --- Read Metadata from json file
+    metadata = read_json(location + filename + ".json")
+
+    # --- Read Values from 'csv' files
+    experiment = read_csvs(metadata, location + filename)
+    experiment.filename = filename
+
+    # --- Get some features
+    experiment.elapsed_times()
+    experiment.get_atmospheric_pressure()
+    experiment.get_steady_vacuum('Steady', "Vacuum Off")
+
+    # 6. Plot each experiment if needed
+    experiment.plot_only_pressure_animated()
+    plt.show()
+
+
+    # Show image of the time series
+
+
+
 def main():
 
-    # TODO Deal with the videos and images
     # TODO Interpret moments. Consider that the lever is the height of the rig
 
-    # noise_experiments()
 
     # circle_plots(1,1,1)
     # noise_experiments("vertical")
-    simple_suction_experiment()
+    # simple_suction_experiment()
+    plot_and_video()
 
 
 if __name__ == '__main__':
