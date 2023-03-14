@@ -41,7 +41,7 @@ def bagToPng(input_dir, bag_file, output_dir, cam_topic):
     bag.close()
 
 
-def bagToVideo(input_dir, bag_file, output_dir, cam_topic, counter):
+def bagToVideo(input_dir, bag_file, output_dir, cam_topic, only_filename):
     """Method to extract video from bagfile"""
 
     bag = rosbag.Bag(input_dir + bag_file)
@@ -54,7 +54,7 @@ def bagToVideo(input_dir, bag_file, output_dir, cam_topic, counter):
 
         if out is None:
             fps = bag.get_type_and_topic_info()[1][cam_topic][3]
-            out = cv2.VideoWriter(output_dir + str(counter) + '.avi', cv2.VideoWriter_fourcc(*'MP4V'), fps, (w, h))
+            out = cv2.VideoWriter(output_dir + only_filename + '.avi', cv2.VideoWriter_fourcc(*'MP4V'), fps, (w, h))
         out.write(img)
 
     bag.close()
@@ -69,28 +69,28 @@ def main():
     # location = os.path.dirname(os.getcwd())
     location = "/home/alejo/Documents"
     in_folder = '/data/samples_with_camera/'
-    out_folder = '/data/samples_with_camera/media/'
+    out_folder = '/data/samples_with_camera/'
     image_topic = '/usb_cam/image_raw'
 
     input_folder = location + in_folder
     output_folder = location + out_folder
 
     # Sweep folder location with bagfiles
-    counter = 0
     for file in sorted(os.listdir(input_folder)):
         if file.endswith(".bag"):
-            # output_dir = output_folder + "pngs" + str(counter) + "/"
+
             only_filename = file.split(".bag")[0]
             output_dir = output_folder + only_filename + "/pngs/"
-            os.makedirs(output_dir)
+
+            # Create Dir if it doesnt exists
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
 
             # Uncomment for PNGs
             bagToPng(input_folder, file, output_dir, image_topic)
 
             # Uncomment for AVIs
-            # bagToVideo(input_folder, file, output_dir, image_topic, counter)
-
-            counter += 1
+            bagToVideo(input_folder, file, output_dir, image_topic, only_filename)
 
 
 if __name__ == '__main__':

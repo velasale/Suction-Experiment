@@ -766,7 +766,7 @@ class Experiment:
         location = '/home/alejo/Documents/data/samples_with_camera/'
         filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
 
-        # Sort the pngs files in a list
+        # Sort png files in a list
         lst = os.listdir(location + filename + '/pngs')
         listop = []
         for i in lst:
@@ -779,6 +779,8 @@ class Experiment:
         ax[0].set_xlim(0, max(pressure_time))
         ax[0].set_ylim(0, 1200)
         ax[0].grid()
+        ax[0].set_xlabel('Elapsed time [sec]')
+        ax[0].set_ylabel('Pressure [hPa]')
         plt.ion()
         plt.show()
 
@@ -788,17 +790,30 @@ class Experiment:
         for spine in ['top', 'right', 'left', 'bottom']:
             ax[1].spines[spine].set_visible(False)
 
+        out = None
         for i in listop:
+            # Vertical Line moving along the x axis
             x = i/1000
             line = ax[0].axvline(x=x, color='red', linestyle='dotted', linewidth=2)
+
+            # Picture from the rosbag file
             img = plt.imread(location + filename + '/pngs/' + str(i) + '.png', 0)
             im = OffsetImage(img, zoom=0.55)
             ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
             ax[1].add_artist(ab)
-            plt.pause(0.1)
+            plt.pause(0.025)
+
+            if out is None:
+                out = cv2.VideoWriter(location + filename + '/trial.avi', cv2.VideoWriter_fourcc(*'MP4V'), 40, (640, 480))
+
+            img_for_video = cv2.cvtColor(np.asarray(fig.canvas.buffer_rgba()), cv2.COLOR_RGBA2BGR)
+            out.write(img_for_video)
+
             # Remove annotations to avoid RAM memory consumption
             ab.remove()
             line.remove()
+
+        out.release()
 
 
 def noise_experiments(exp_type="vertical"):
