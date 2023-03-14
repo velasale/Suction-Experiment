@@ -753,7 +753,9 @@ class Experiment:
         plt.title(self.filename)
 
     def plot_only_pressure_animated(self):
-        """Plots wrench (forces and moments) and pressure readings"""
+        """Plots wrench (forces and moments) and pressure readings
+        Refs:https://stackoverflow.com/questions/61808191/is-there-an-easy-way-to-animate-a-scrolling-vertical-line-in-matplotlib
+        """
 
         pressure_time = self.pressure_elapsed_time
         pressure_values = self.pressure_values
@@ -764,6 +766,7 @@ class Experiment:
         location = '/home/alejo/Documents/data/samples_with_camera/'
         filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
 
+        # Sort the pngs files in a list
         lst = os.listdir(location + filename + '/pngs')
         print(lst)
         listop = []
@@ -771,35 +774,34 @@ class Experiment:
             x = i.split('.png')[0]
             listop.append(int(x))
         listop.sort()
-        print(listop)
 
-        fig, ax = plt.subplots(nrows=1, ncols=1)
-        ax.plot(pressure_time, pressure_values, 'k-', linewidth=2)
-        line = ax.axvline(x=0, color='black', linestyle='dotted', linewidth=1)
-
-        plt.xlim(0, max(pressure_time))
-        plt.ylim(0, 1200)
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4.8))
+        ax[0].plot(pressure_time, pressure_values, 'k-', linewidth=2)
+        ax[0].set_xlim(0, max(pressure_time))
+        ax[0].set_ylim(0, 1200)
+        ax[0].grid()
         plt.ion()
-        plt.grid()
         plt.show()
 
-        count = 0
-        delta = 2
-        j=0
+        ax[1].xaxis.set_visible(False)
+        ax[1].yaxis.set_visible(False)
+        for spine in ['top', 'right', 'left', 'bottom']:
+            ax[1].spines[spine].set_visible(False)
+
 
         for i in listop:
             x = i/1000
+            line = ax[0].axvline(x=x, color='red', linestyle='dotted', linewidth=2)
 
-            line = None
-
-            line = ax.axvline(x=x, color='black', linestyle='dotted', linewidth=1)
             img = plt.imread(location + filename + '/pngs/' + str(i) + '.png', 0)
-            im = OffsetImage(img, zoom=0.35)
+            im = OffsetImage(img, zoom=0.55)
             ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
-            ax.add_artist(ab)
+            ax[1].add_artist(ab)
             plt.pause(0.1)
+            # Remove annotations to avoid RAM memory consumption
             ab.remove()
             line.remove()
+
 
 
         # for i, serie in enumerate(pressure_values):
@@ -1044,10 +1046,6 @@ def plot_and_video():
     # 6. Plot each experiment if needed
     experiment.plot_only_pressure_animated()
     plt.show()
-
-
-    # Show image of the time series
-
 
 
 def main():
