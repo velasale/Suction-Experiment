@@ -768,7 +768,6 @@ class Experiment:
 
         # Sort the pngs files in a list
         lst = os.listdir(location + filename + '/pngs')
-        print(lst)
         listop = []
         for i in lst:
             x = i.split('.png')[0]
@@ -783,16 +782,15 @@ class Experiment:
         plt.ion()
         plt.show()
 
+        # Remove details from ax[1] because we are displaying only the image
         ax[1].xaxis.set_visible(False)
         ax[1].yaxis.set_visible(False)
         for spine in ['top', 'right', 'left', 'bottom']:
             ax[1].spines[spine].set_visible(False)
 
-
         for i in listop:
             x = i/1000
             line = ax[0].axvline(x=x, color='red', linestyle='dotted', linewidth=2)
-
             img = plt.imread(location + filename + '/pngs/' + str(i) + '.png', 0)
             im = OffsetImage(img, zoom=0.55)
             ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
@@ -801,26 +799,6 @@ class Experiment:
             # Remove annotations to avoid RAM memory consumption
             ab.remove()
             line.remove()
-
-
-
-        # for i, serie in enumerate(pressure_values):
-        #     if count % delta == 0:
-        #         ax.plot((pressure_time[i], pressure_time[i+delta]), (pressure_values[i], pressure_values[i+delta]), 'k-', linewidth=2)
-        #         plt.gcf().canvas.draw()
-        #         plt.pause(0.0005)
-        #
-        #         times = int(pressure_time[i]*1000)
-        #
-        #         while listop[j] < times:
-        #             j += 1
-        #
-        #         img = plt.imread(location + filename + '/pngs/' + str(listop[j]) + '.png', 0)
-        #         im = OffsetImage(img, zoom=0.35)
-        #         ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
-        #         ax.add_artist(ab)
-        #
-        #     count += 1
 
 
 def noise_experiments(exp_type="vertical"):
