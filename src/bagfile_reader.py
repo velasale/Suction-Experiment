@@ -10,6 +10,7 @@ import cv2
 
 import bagpy
 from matplotlib import pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import pandas as pd
 from bagpy import bagreader
 import numpy as np
@@ -760,18 +761,64 @@ class Experiment:
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
+        location = '/home/alejo/Documents/data/samples_with_camera/'
+        filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
+
+        lst = os.listdir(location + filename + '/pngs')
+        print(lst)
+        listop = []
+        for i in lst:
+            x = i.split('.png')[0]
+            listop.append(int(x))
+        listop.sort()
+        print(listop)
+
         fig, ax = plt.subplots(nrows=1, ncols=1)
-        line = ax.plot((pressure_time[0], pressure_time[1]), (pressure_values[0], pressure_values[1]), 'k-', linewidth=2)
+        ax.plot(pressure_time, pressure_values, 'k-', linewidth=2)
+        line = ax.axvline(x=0, color='black', linestyle='dotted', linewidth=1)
 
         plt.xlim(0, max(pressure_time))
         plt.ylim(0, 1200)
         plt.ion()
+        plt.grid()
         plt.show()
 
-        for i, serie in enumerate(pressure_values):
-            line = ax.plot((pressure_time[i], pressure_time[i+1]), (pressure_values[i], pressure_values[i+1]), 'k-', linewidth=2)
-            plt.gcf().canvas.draw()
-            plt.pause(0.001)
+        count = 0
+        delta = 2
+        j=0
+
+        for i in listop:
+            x = i/1000
+
+            line = None
+
+            line = ax.axvline(x=x, color='black', linestyle='dotted', linewidth=1)
+            img = plt.imread(location + filename + '/pngs/' + str(i) + '.png', 0)
+            im = OffsetImage(img, zoom=0.35)
+            ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
+            ax.add_artist(ab)
+            plt.pause(0.1)
+            ab.remove()
+            line.remove()
+
+
+        # for i, serie in enumerate(pressure_values):
+        #     if count % delta == 0:
+        #         ax.plot((pressure_time[i], pressure_time[i+delta]), (pressure_values[i], pressure_values[i+delta]), 'k-', linewidth=2)
+        #         plt.gcf().canvas.draw()
+        #         plt.pause(0.0005)
+        #
+        #         times = int(pressure_time[i]*1000)
+        #
+        #         while listop[j] < times:
+        #             j += 1
+        #
+        #         img = plt.imread(location + filename + '/pngs/' + str(listop[j]) + '.png', 0)
+        #         im = OffsetImage(img, zoom=0.35)
+        #         ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
+        #         ax.add_artist(ab)
+        #
+        #     count += 1
 
 
 def noise_experiments(exp_type="vertical"):

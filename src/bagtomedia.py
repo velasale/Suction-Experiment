@@ -33,7 +33,7 @@ def bagToPng(input_dir, bag_file, output_dir, cam_topic):
         cv2.putText(cv_img, 'time [sec]: ' + str(elapsed_time), (int(cv_img.shape[0] * 0.05), int(cv_img.shape[1] * 0.73)), font, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
 
         # Save file
-        cv2.imwrite(os.path.join(output_dir, "frame%06i.png" % count), cv_img)
+        cv2.imwrite(os.path.join(output_dir, str(int(elapsed_time*1000)) + ".png"), cv_img)
         print("Wrote image %i" % count)
 
         count += 1
