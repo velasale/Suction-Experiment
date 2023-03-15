@@ -63,9 +63,15 @@ sudo apt install ros-noetic-moveit
 1. Upload code into **arduino board**.
 2. Check the port name, and make sure it matches the one written at line 50 of **serial_node.py**.
 3. Launch the lab setup in 1st terminal:
+* With real hardware (ur5, camera, arduino)
 ```console
 roslaunch suctioncup_experiment.launch
 ```
+* Just simulate in RVIZ
+```console
+roslaunch apple_proxy pickApp.launch
+```
+
 4. Run experiment code in 2nd terminal:
 ```console
 python3 suction_experiment.py
