@@ -507,7 +507,7 @@ class SuctionExperiment():
         goal_pose.pose.position.z = - (self.OFFSET + (self.SPHERE_RADIUS - 0.075/2) + z_calibration)
         #goal_pose.pose.position.z = - self.OFFSET
        
-        roll = 0
+        roll = math.radians(45)
         pitch = 0
         yaw = 0
         q = quaternion_from_euler(roll, pitch, yaw)
