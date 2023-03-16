@@ -23,6 +23,8 @@ from geometry_msgs.msg import Pose, Point, Quaternion, Vector3, Polygon
 import moveit_commander
 from moveit_commander.conversions import pose_to_list
 import moveit_msgs.msg
+from moveit_msgs.msg import Constraints, JointConstraint
+
 from std_msgs.msg import String, Int32
 # import sympy as sym
 import tf
@@ -89,8 +91,8 @@ def service_call(service):
 def z_noise_experiment(suction_experiment):   
 
     steps = 12
-    reps_at_each_step = 3
-    noise_res = 1.3 * suction_experiment.SUCTION_CUP_SPEC / steps
+    reps_at_each_step = 1
+    noise_res = 1.3 * suction_experiment.SUCTION_CUP_SPEC * math.cos(suction_experiment.pitch) / steps
 
     # Step 2: Add noise
     for step in range(steps):
@@ -110,6 +112,8 @@ def z_noise_experiment(suction_experiment):
             # --- Move to Starting position
             print("Moving to starting position")
             suction_experiment.publish_event("Start")
+            # move1 = False
+            # while not move1:
             move1 = suction_experiment.go_to_starting_position()
             print("Move 1:", move1)
             # time.sleep(0.01)
@@ -147,7 +151,7 @@ def z_noise_experiment(suction_experiment):
             # --- Approach the surface
             print("Approaching surface")
             suction_experiment.publish_event("Approach")
-            move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
+            move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC * math.cos(suction_experiment.pitch))
             print("Move 3:",move3)
 
             # Wait some time to have a steady state
@@ -157,7 +161,7 @@ def z_noise_experiment(suction_experiment):
             # --- Retrieve from surface
             print("Retreieving from surface")
             suction_experiment.publish_event("Retrieve")
-            move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
+            move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC * math.cos(suction_experiment.pitch))
             print("Move 4:",move4)
             # time.sleep(0.1)
 
@@ -180,84 +184,95 @@ def z_noise_experiment(suction_experiment):
 def x_noise_experiment(suction_experiment):
 
     steps = 10
+    reps_at_each_step = 1
     noise_res = 1.3 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
 
     # Step 2: Add noise
     for step in range(steps):
+
+        suction_experiment.step = step
 
         print("\n **** Step %d of %d ****" %(step, steps))
 
         suction_experiment.noise_x_command = 1 * noise_res * step
         noise_for_filename = round(suction_experiment.noise_x_command * 1000, 2)
         suction_experiment.noise_z_command = suction_experiment.calc_vertical_noise()
+        pitch_for_filename = round(math.degrees(suction_experiment.pitch), 2)
 
-        # --- Move to Starting position
-        print("Moving to starting position")
-        suction_experiment.publish_event("Start")
-        move1 = suction_experiment.go_to_starting_position()
-        print("Move 1:", move1)
-        # time.sleep(0.01)
+        for rep in range(reps_at_each_step):
 
-        # --- Start Recording Rosbag file
-        location = os.path.dirname(os.getcwd())
-        foldername = "/data/"
-        name = suction_experiment.experiment_type \
-               + "_#" + str(step) \
-               + "_pres_" + str(suction_experiment.pressureAtValve) \
-               + "_surface_" + suction_experiment.SURFACE \
-               + "_radius_" + str(suction_experiment.SPHERE_RADIUS) \
-               + "_noise_" + str(noise_for_filename)
+            suction_experiment.repetition = rep + 1
 
-        filename = location + foldername + name
-        command, rosbag_process = start_saving_rosbag(filename)
-        print("Start recording Rosbag")
-        time.sleep(0.1)
+            # --- Move to Starting position
+            print("Moving to starting position")
+            suction_experiment.publish_event("Start")
+            move1 = suction_experiment.go_to_starting_position()
+            print("Move 1:", move1)
+            # time.sleep(0.01)
 
-        # --- Add noise to the starting position                
-        print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_x_command * 1000))
-        suction_experiment.publish_event("Noise")
-        # Note: made the x noise negative, to avoid the robot doing weird movements
-        move2 = suction_experiment.add_cartesian_noise(-1 * suction_experiment.noise_x_command, 0, suction_experiment.noise_z_command)
-        print("Move 2:",move2)
-        # time.sleep(0.1)
+            # --- Start Recording Rosbag file
+            location = os.path.dirname(os.getcwd())
+            foldername = "/data/"
+            name = suction_experiment.experiment_type \
+                   + "_#" + str(step) \
+                   + "_pres_" + str(suction_experiment.pressureAtValve) \
+                   + "_surface_" + suction_experiment.SURFACE \
+                   + "_radius_" + str(suction_experiment.SPHERE_RADIUS) \
+                   + "_noise_" + str(noise_for_filename) \
+                   + "_pitch_" + str(pitch_for_filename) \
+                   + "_rep_" + str(suction_experiment.repetition)
 
-        # --- Apply vacuum
-        print("Applying vacuum")
-        suction_experiment.publish_event("Vacuum On")
-        service_call("openValve")
-        # time.sleep(0.1)
+            filename = location + foldername + name
+            command, rosbag_process = start_saving_rosbag(filename)
+            print("Start recording Rosbag")
+            time.sleep(0.1)
 
-        # --- Approach the surface
-        print("Approaching surface")
-        suction_experiment.publish_event("Approach")
-        move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC)
-        print("Move 3:", move3)
+            # --- Add noise to the starting position
+            print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_x_command * 1000))
+            suction_experiment.publish_event("Noise")
+            # Note: made the x noise negative, to avoid the robot doing weird movements
+            move2 = suction_experiment.add_cartesian_noise(-1 * suction_experiment.noise_x_command, 0, 0)
+            move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
+            print("Move 2:", move2)
+            # time.sleep(0.1)
 
-        # Wait some time to have a steady state
-        suction_experiment.publish_event("Steady")
-        time.sleep(2)
+            # --- Apply vacuum
+            print("Applying vacuum")
+            suction_experiment.publish_event("Vacuum On")
+            service_call("openValve")
+            # time.sleep(0.1)
 
-        # --- Retrieve from surface
-        print("Retreieving from surface")
-        suction_experiment.publish_event("Retrieve")
-        move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC)
-        print("Move 4:",move4)
-        # time.sleep(0.1)
+            # --- Approach the surface
+            print("Approaching surface")
+            suction_experiment.publish_event("Approach")
+            move3 = suction_experiment.move_in_z(suction_experiment.OFFSET + suction_experiment.SUCTION_CUP_SPEC * math.cos(suction_experiment.pitch))
+            print("Move 3:", move3)
 
-        # --- Stop vacuum
-        print("Stop vacuum")
-        suction_experiment.publish_event("Vacuum Off")
-        service_call("closeValve")
-        # time.sleep(0.05)
+            # Wait some time to have a steady state
+            suction_experiment.publish_event("Steady")
+            time.sleep(2)
 
-        # --- Stop recording
-        terminate_saving_rosbag(command, rosbag_process)
-        print("Stop recording Rosbag")
-        time.sleep(1)
+            # --- Retrieve from surface
+            print("Retreieving from surface")
+            suction_experiment.publish_event("Retrieve")
+            move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC * 1.5) # a bit more to avoid hitting when going to starting point
+            print("Move 4:",move4)
+            # time.sleep(0.1)
 
-        # --- Finally save the metadata
-        suction_experiment.save_metadata(filename)
-        print("Saving Metadata")     
+            # --- Stop vacuum
+            print("Stop vacuum")
+            suction_experiment.publish_event("Vacuum Off")
+            service_call("closeValve")
+            # time.sleep(0.05)
+
+            # --- Stop recording
+            terminate_saving_rosbag(command, rosbag_process)
+            print("Stop recording Rosbag")
+            time.sleep(1)
+
+            # --- Finally save the metadata
+            suction_experiment.save_metadata(filename)
+            print("Saving Metadata")
 
 
 def simple_cup_experiment(suction_experiment):   
@@ -441,7 +456,7 @@ class SuctionExperiment():
         self.pressureAtCompressor = 100
         self.pressureAtValve = 50
         self.roll = math.radians(0)
-        self.pitch = math.radians(0)
+        self.pitch = math.radians(15)
         self.repetition = 0
         
         # Source https://www.piab.com/inriverassociations/0206204/#specifications
@@ -449,7 +464,7 @@ class SuctionExperiment():
         self.SUCTION_CUP_SPEC = 0.010
         self.SUCTION_CUP_RADIUS = 0.021 / 2
 
-        self.OFFSET = 0.01     # This should be checked with the calibration_zero function. Look at 'dz'
+        self.OFFSET = 0.015     # This should be checked with the calibration_zero function. Look at 'dz'
         self.SPHERE_RADIUS = 0.085/2
         self.SURFACE = "3DprintedPLA"
 
@@ -759,14 +774,52 @@ class SuctionExperiment():
         self.event_publisher.publish(event)
 
     def calc_vertical_noise(self):
-        
+
         delta_x = self.noise_x_command
+
+        x_tangent_threshold = self.SPHERE_RADIUS * math.sin(self.pitch)
+        y_tangent_threshold = self.SPHERE_RADIUS * math.cos(self.pitch)
+
+        x_part = self.SUCTION_CUP_RADIUS * math.cos(self.pitch)
+        y_part = self.SUCTION_CUP_RADIUS * math.sin(self.pitch)
+
+        x_right_shift = delta_x - x_part
+        x_left_shift = delta_x + x_part
+
+        if x_left_shift < x_tangent_threshold:
+            print("First Part")
+            # First part
+            y_shift = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - x_left_shift ** 2)
+            delta_z = - y_part + y_shift
+        elif x_right_shift > x_tangent_threshold:
+            print("Last Part")
+            # Last part
+            y_shift = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - x_right_shift ** 2)
+            delta_z = - y_part + y_shift
+        else:
+            print("Middle Part")
+            # Tangent part
+            x_middle_shift = delta_x - x_tangent_threshold
+            y_middle_shift = x_middle_shift * math.tan(self.pitch) + y_tangent_threshold
+            delta_z = - y_part + y_middle_shift
+
 
         # delta x is at the center of the cup, but it needs to be adjusted to the edge of the cup
         # to avoid jamming it
-        delta_x -= self.SUCTION_CUP_RADIUS
 
-        delta_z = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - delta_x ** 2)
+        # # Keep the cup tangent
+        # if delta_x > self.SUCTION_CUP_RADIUS:
+        #     delta_x -= self.SUCTION_CUP_RADIUS
+        #     delta_z = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - delta_x ** 2)
+        # else:
+        #
+        #     delta_z = 0
+        #
+        #
+        #
+        # # Also adjust the height, when there is a pitch present, so the tip touches the circumference
+        # delta_z = \
+        #           #+ self.SUCTION_CUP_RADIUS * math.sin(self.pitch)
 
         return delta_z
 
