@@ -3,6 +3,7 @@ import math
 import os
 import re
 import csv
+import time
 
 from operator import sub, add
 # from cv_bridge import CvBridge
@@ -765,6 +766,7 @@ class Experiment:
 
         location = '/home/alejo/Documents/data/samples_with_camera/'
         filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
+        filename = 'vertical_#10_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_-10.83'
 
         # Sort png files in a list
         lst = os.listdir(location + filename + '/pngs')
@@ -785,6 +787,8 @@ class Experiment:
         plt.ion()
         plt.show()
 
+
+
         # Remove details from ax[1] because we are displaying only the image
         ax[1].xaxis.set_visible(False)
         ax[1].yaxis.set_visible(False)
@@ -792,6 +796,7 @@ class Experiment:
             ax[1].spines[spine].set_visible(False)
 
         # out = None
+        counter = 0
         for i in listop:
             # Vertical Line moving along the x axis
             x = i/1000
@@ -812,6 +817,11 @@ class Experiment:
             # Remove annotations to avoid RAM memory consumption
             ab.remove()
             line.remove()
+
+            if counter == 0:
+                time.sleep(10)
+
+            counter += 1
 
         # out.release()
 
@@ -1033,6 +1043,7 @@ def plot_and_video():
     # --- Give File
     location = '/home/alejo/Documents/data/samples_with_camera/'
     filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
+    filename = 'vertical_#10_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_-10.83'
 
     # --- Open Bag file
     # bag_to_csvs(location + filename + ".bag")
@@ -1059,10 +1070,10 @@ def main():
     # TODO Interpret moments. Consider that the lever is the height of the rig
 
     # circle_plots(1,1,1)
-    noise_experiments('horizontal')
+    # noise_experiments('horizontal')
     # noise_experiments('vertical')
     # simple_suction_experiment()
-    # plot_and_video()
+    plot_and_video()
 
 
 if __name__ == '__main__':

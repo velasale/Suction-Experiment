@@ -18,58 +18,64 @@ class SuctionCup():
         self.angle = 0
         self.location = [0, -50]
 
+
 def get_offset(radius, distance, theta):
     """Given a certain distance between the center of the apple and the edge of the cup,
     and a rotation angle of the suction cup, calculate the offset between the center of
-    the apple and the centerline of the cup"""
+    the apple and the centerline of the cup
+    @radius: radius of the apple
+    @distance: distance from the center of the apple
+    @theta: tilting angle of the suction cup
+    """
 
-    beta = math.asin(distance / radius)
-    angle = beta + math.radians(theta)
-    offset = abs(radius * math.sin(angle))
+    if distance < radius:
+        beta = math.asin(distance / radius)
+        angle = beta + math.radians(theta)
+        offset = abs(radius * math.sin(angle))
+    else:
+        offset = 1e9
 
     return offset
-
 
 
 def data_from_exp():
 
     # ------ Vertical Experiments -------
-    FeedIn Pressure: 40
+    # FeedIn Pressure: 40
     zNoises: [0.0, 0.0008, 0.0022, 0.0031, 0.0042, 0.0053, 0.0065, 0.0075, 0.0086, 0.0097, 0.0108, 0.0119]
-    zForce means: [4.39, 4.29, 4.47, 4.51, 4.48, 4.23, 4.09, 4.22, 4.31, 4.32, 4.33, 0.07]
+    zForce_means: [4.39, 4.29, 4.47, 4.51, 4.48, 4.23, 4.09, 4.22, 4.31, 4.32, 4.33, 0.07]
 
-    Feed In Pressure: 50
+    # Feed In Pressure: 50
     zNoises: [0.0001, 0.001, 0.0021, 0.0031, 0.0042, 0.0054, 0.0065, 0.0075, 0.0086, 0.0097, 0.0108, 0.0119]
-    zForce means: [4.54, 4.44, 4.32, 4.22, 4.3, 4.76, 4.6, 4.18, 4.12, 4.34, 4.33, 0.18]
+    zForce_means: [4.54, 4.44, 4.32, 4.22, 4.3, 4.76, 4.6, 4.18, 4.12, 4.34, 4.33, 0.18]
 
-    FeedIn
-    Pressure: 60
+    # FeedIn Pressure: 60
     zNoises: [0.0, 0.0009, 0.0021, 0.0031, 0.0043, 0.0053, 0.0064, 0.0075, 0.0086, 0.0097, 0.0108, 0.0119]
-    zForce means: [4.72, 4.3, 4.33, 4.19, 4.46, 4.93, 4.12, 4.02, 4.28, 4.24, 4.17, 0.07]
+    zForce_means: [4.72, 4.3, 4.33, 4.19, 4.46, 4.93, 4.12, 4.02, 4.28, 4.24, 4.17, 0.07]
 
-    Feed InPressure: 70
+    # Feed InPressure: 70
     zNoises: [0.0001, 0.0009, 0.0021, 0.0032, 0.0043, 0.0054, 0.0065, 0.0075, 0.0086, 0.0097, 0.0108, 0.0118]
-    zForce means: [4.94, 4.56, 4.18, 4.1, 4.29, 4.19, 4.1, 3.96, 4.24, 4.32, 4.24, 0.04]
+    zForce_means: [4.94, 4.56, 4.18, 4.1, 4.29, 4.19, 4.1, 3.96, 4.24, 4.32, 4.24, 0.04]
 
     # --------- HORIZONTAL EXPERIMENTS ---------
-    Feed In Pressure: 40
-    zForce means: [4.61, 4.32, 4.13, 3.86, 3.72, 3.65, 3.31, 3.13, 0.13, -0.13]
-    xForce means: [0.29, 0.57, 1.15, 1.83, 2.2, 2.57, 2.47, 2.36, 0.12, 0.04]
+    # Feed In Pressure: 40
+    zForce_means: [4.61, 4.32, 4.13, 3.86, 3.72, 3.65, 3.31, 3.13, 0.13, -0.13]
+    xForce_means: [0.29, 0.57, 1.15, 1.83, 2.2, 2.57, 2.47, 2.36, 0.12, 0.04]
     xNoises: [0.0001, 0.0041, 0.0083, 0.0124, 0.0167, 0.0207, 0.0248, 0.0291, 0.0332, 0.0374]
 
-    Feed In Pressure: 50
-    zForce means: [4.8, 4.71, 4.29, 4.0, 3.87, 3.71, 3.11, 3.24, 0.25, -0.12]
-    xForce means: [0.2, 0.66, 1.34, 1.74, 2.13, 2.62, 2.53, 2.34, 0.19, 0.25]
+    # Feed In Pressure: 50
+    zForce_means: [4.8, 4.71, 4.29, 4.0, 3.87, 3.71, 3.11, 3.24, 0.25, -0.12]
+    xForce_means: [0.2, 0.66, 1.34, 1.74, 2.13, 2.62, 2.53, 2.34, 0.19, 0.25]
     xNoises: [0.0, 0.004, 0.0083, 0.0124, 0.0166, 0.0208, 0.0249, 0.0291, 0.0332, 0.0374]
 
-    Feed In Pressure: 60
-    zForce means: [5.12, 4.71, 4.54, 4.13, 3.94, 3.97, 3.37, 3.21, 0.07, -0.07]
-    xForce means: [0.22, 0.51, 1.3, 1.72, 2.19, 2.68, 2.54, 2.21, 0.26, 0.26]
+    # Feed In Pressure: 60
+    zForce_means: [5.12, 4.71, 4.54, 4.13, 3.94, 3.97, 3.37, 3.21, 0.07, -0.07]
+    xForce_means: [0.22, 0.51, 1.3, 1.72, 2.19, 2.68, 2.54, 2.21, 0.26, 0.26]
     xNoises: [0.0001, 0.0041, 0.0084, 0.0125, 0.0165, 0.0207, 0.0249, 0.0291, 0.0332, 0.0373]
 
-    Feed In Pressure: 70
-    zForce means: [5.19, 4.77, 4.36, 4.03, 3.98, 3.82, 3.41, 3.3, 0.04, -0.2]
-    xForce means: [0.2, 0.68, 1.31, 1.72, 2.49, 2.75, 2.62, 2.26, 0.24, -0.05]
+    # Feed In Pressure: 70
+    zForce_means: [5.19, 4.77, 4.36, 4.03, 3.98, 3.82, 3.41, 3.3, 0.04, -0.2]
+    xForce_means: [0.2, 0.68, 1.31, 1.72, 2.49, 2.75, 2.62, 2.26, 0.24, -0.05]
     xNoises: [0.0, 0.0041, 0.0083, 0.0125, 0.0166, 0.0208, 0.0249, 0.0291, 0.0332, 0.0374]
 
 
@@ -123,23 +129,29 @@ def main():
     rightsc = SuctionCup()
 
     map_forces = []
-    for distance in range(0, 35, 1):
+
+    # Sweep all possible offsets from the center
+    for distance in range(0, 45, 1):
         thetas = []
         offsets = []
-        zforces_interp = []
+        zforces_interpolated = []
         thetas_plot = []
-        for theta in range(-80, 60, 1):
+
+        # Sweep all the possible tilting angles at each of the offset distances
+        for theta in range(-100, 100, 2):
             thetas_plot.append(theta)
             offset = get_offset(apple.diameter/2, distance, theta)
+
+            # Only consider those offsets where the "shadow" of the cup remains within the apple
             if (abs(offset) + leftsc.compliant_diameter/2) < apple.diameter/2:
                 thetas.append(round(theta, 1))
                 offsets.append(round(offset, 1))
 
-                # Interpolate to obtain zforce
-                index=1
-                for baba in x_noises:
-                    if baba > offset:
-                        index = x_noises.index(baba)
+                # Interpolate the offset from the experiment's data to obtain expected zForce
+                index = 1
+                for offset_from_data in x_noises:
+                    if offset_from_data > offset:
+                        index = x_noises.index(offset_from_data)
                     break
 
                 x1 = x_noises[index]*1000
@@ -148,26 +160,27 @@ def main():
                 y0 = zforce_means[index-1]
 
                 y = y1 + (y0-y1)*(x1 - offset)/(x1-x0)
-                zforces_interp.append(round(y, 2))
+                zforces_interpolated.append(round(y, 2))
 
             else:
                 thetas.append('Nan')
                 offsets.append('Nan')
-                zforces_interp.append('Nan')
+                zforces_interpolated.append('Nan')
 
         print('\nDistance:', distance)
-        print(thetas)
-        print(offsets)
-        print(zforces_interp)
+        print('Tilt Angles:', thetas)
+        print('Resulting offsets:', offsets)
+        print('Expected zForces:', zforces_interpolated)
 
-        map_forces.append(zforces_interp)
+        map_forces.append(zforces_interpolated)
 
-    print(len(zforces_interp), len(thetas_plot))
+    print(len(zforces_interpolated), len(thetas_plot))
 
     new = np.transpose(map_forces)
-    fig = px.imshow(new, y=thetas_plot, aspect='auto')
-    fig.update_traces(colorbar_orientation='h', selector=dict(type='heatmap'))
+    fig = px.imshow(new, y=thetas_plot, color_continuous_scale='Blues', aspect='auto')
+    fig.update_traces(colorbar_orientation='v', selector=dict(type='heatmap'))
     fig.show()
+
 
 if __name__ == '__main__':
     main()
