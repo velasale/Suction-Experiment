@@ -199,7 +199,7 @@ def x_noise_experiment(suction_experiment):
         suction_experiment.noise_z_command = suction_experiment.calc_vertical_noise()
         pitch_for_filename = round(math.degrees(suction_experiment.pitch), 2)
 
-        for rep in range(reps_at_each_step):
+        for rep in range(0, reps_at_each_step):
 
             suction_experiment.repetition = rep + 1
 
@@ -263,7 +263,7 @@ def x_noise_experiment(suction_experiment):
             print("Stop vacuum")
             suction_experiment.publish_event("Vacuum Off")
             service_call("closeValve")
-            # time.sleep(0.05)
+            time.sleep(0.05)
 
             # --- Stop recording
             terminate_saving_rosbag(command, rosbag_process)
@@ -774,6 +774,8 @@ class SuctionExperiment():
         self.event_publisher.publish(event)
 
     def calc_vertical_noise(self):
+        """Calculate the amount of movement in z required to keep the suction-cup either tangent or
+        edge-touching the sphere"""
 
         delta_x = self.noise_x_command
 
@@ -803,28 +805,13 @@ class SuctionExperiment():
             y_middle_shift = x_middle_shift * math.tan(self.pitch) + (self.SPHERE_RADIUS - y_tangent_threshold)
             delta_z = - y_part + y_middle_shift
 
-
-        # delta x is at the center of the cup, but it needs to be adjusted to the edge of the cup
-        # to avoid jamming it
-
-        # # Keep the cup tangent
-        # if delta_x > self.SUCTION_CUP_RADIUS:
-        #     delta_x -= self.SUCTION_CUP_RADIUS
-        #     delta_z = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - delta_x ** 2)
-        # else:
-        #
-        #     delta_z = 0
-        #
-        #
-        #
-        # # Also adjust the height, when there is a pitch present, so the tip touches the circumference
-        # delta_z = \
-        #           #+ self.SUCTION_CUP_RADIUS * math.sin(self.pitch)
-
         return delta_z
 
     
 def main():
+
+    # TODO Build ROS package
+    # TODO Add a check that the solver found a solution, otherwise try again
 
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
