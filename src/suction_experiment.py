@@ -185,7 +185,7 @@ def x_noise_experiment(suction_experiment):
 
     steps = 10
     reps_at_each_step = 1
-    noise_res = 1.3 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
+    noise_res = 1.4 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
 
     # Step 2: Add noise
     for step in range(steps):
@@ -795,7 +795,7 @@ class SuctionExperiment():
             print("Last Part")
             # Last part
             y_shift = self.SPHERE_RADIUS - math.sqrt(self.SPHERE_RADIUS ** 2 - x_right_shift ** 2)
-            delta_z = - y_part + y_shift
+            delta_z = + y_part + y_shift
         else:
             print("Middle Part")
             # Tangent part
@@ -849,7 +849,7 @@ def main():
     suction_experiment.SPHERE_RADIUS = int(input()) / 2000
 
     print("e. Pitch angle [deg]:")
-    suction_experiment.pitch = math.radians(int(input))
+    suction_experiment.pitch = math.radians(int(input()))
 
     # Step 3: Run the experiment
     if experiment == "1":
