@@ -456,7 +456,7 @@ class SuctionExperiment():
         self.pressureAtCompressor = 100
         self.pressureAtValve = 50
         self.roll = math.radians(0)
-        self.pitch = math.radians(15)
+        self.pitch = math.radians(0)
         self.repetition = 0
         
         # Source https://www.piab.com/inriverassociations/0206204/#specifications
@@ -799,8 +799,8 @@ class SuctionExperiment():
         else:
             print("Middle Part")
             # Tangent part
-            x_middle_shift = delta_x - x_tangent_threshold
-            y_middle_shift = x_middle_shift * math.tan(self.pitch) + y_tangent_threshold
+            x_middle_shift = x_left_shift - x_tangent_threshold
+            y_middle_shift = x_middle_shift * math.tan(self.pitch) + (self.SPHERE_RADIUS - y_tangent_threshold)
             delta_z = - y_part + y_middle_shift
 
 
@@ -844,6 +844,12 @@ def main():
     print("c. Pressure at the Valve [PSI]): ")
     print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
     suction_experiment.pressureAtValve = int(input())    
+
+    print("d. Diameter of Surface [mm]:")
+    suction_experiment.SPHERE_RADIUS = int(input()) / 2000
+
+    print("e. Pitch angle [deg]:")
+    suction_experiment.pitch = math.radians(int(input))
 
     # Step 3: Run the experiment
     if experiment == "1":
