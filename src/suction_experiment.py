@@ -184,7 +184,7 @@ def z_noise_experiment(suction_experiment):
 def x_noise_experiment(suction_experiment):
 
     steps = 10
-    reps_at_each_step = 1
+    reps_at_each_step = 4
     noise_res = 1.4 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
 
     # Step 2: Add noise
@@ -199,7 +199,7 @@ def x_noise_experiment(suction_experiment):
         suction_experiment.noise_z_command = suction_experiment.calc_vertical_noise()
         pitch_for_filename = round(math.degrees(suction_experiment.pitch), 2)
 
-        for rep in range(0, reps_at_each_step):
+        for rep in range(3, reps_at_each_step):
 
             suction_experiment.repetition = rep + 1
 
