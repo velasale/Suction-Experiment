@@ -61,8 +61,9 @@ def start_saving_rosbag(name="trial"):
     topics = "/gripper/pressure" \
                 + " wrench" \
                 + " joint_states" \
-                + " /usb_cam/image_raw" \
                 + " experiment_steps"
+                # + " /usb_cam/image_raw" \
+
 
 
     command = "rosbag record -O " + filename + " " + topics    
@@ -811,7 +812,11 @@ class SuctionExperiment():
 def main():
 
     # TODO Build ROS package
+    # TODO Add the option to plot results immediately after each experiment
+    # TODO arrange better the inputs at the beginning
     # TODO Add a check that the solver found a solution, otherwise try again
+    # TODO Parse arguments from command
+    # TODO Check that it moved to the desired position (check the output of the solver, or change in coordinates)
 
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
