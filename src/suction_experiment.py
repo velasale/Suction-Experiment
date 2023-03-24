@@ -61,8 +61,8 @@ def start_saving_rosbag(name="trial"):
     topics = "/gripper/pressure" \
                 + " wrench" \
                 + " joint_states" \
-                + " experiment_steps"
-                # + " /usb_cam/image_raw" \
+                + " experiment_steps" \
+                + " /usb_cam/image_raw" \
 
 
 
@@ -335,7 +335,7 @@ def simple_cup_experiment(suction_experiment):
 
         # Wait some time to have a steady state
         suction_experiment.publish_event("Steady")
-        time.sleep(2)
+        time.sleep(5)
 
         # # --- Retrieve from surface
         # print("Retreieving from surface")
@@ -811,6 +811,7 @@ class SuctionExperiment():
     
 def main():
 
+    # TODO add procedure to check Max vacuum from the very beginning
     # TODO Build ROS package
     # TODO Add the option to plot results immediately after each experiment
     # TODO arrange better the inputs at the beginning

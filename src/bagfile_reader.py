@@ -23,7 +23,9 @@ from scipy.ndimage import gaussian_filter, median_filter
 def bag_to_csvs(file):
     """Open all bagfiles in a folder and saves all topics as csvs"""
 
+
     if file.endswith(".bag"):
+        print(file)
         bag = bagreader(file)
         # print("\n\n", file)
 
@@ -33,18 +35,11 @@ def bag_to_csvs(file):
 
         # --- Read the desired topic ---
         for topic in topics["Topics"]:
-            if topic != '/camera/color/image_raw':
+            if topic != '/usb_cam/image_raw':
                 # Once opened, data is saved automatically into a csv file.
                 data = bag.message_by_topic(topic)
             else:
-                # Source: https://idorobotics.com/2021/03/08/extracting-ros-bag-files-to-python/
-                image_topic = bag.read_messages(topic)
-                for k, b in enumerate(image_topic):
-                    bridge = CvBridge()
-                    cv_image = bridge.imgmsg_to_cv2(b.message, b.message.encoding)
-                    cv_image.astype(np.uint8)
-                    cv2.imwrite(TRIAL + str(b.timestamp) + '.png', cv_image)
-
+                pass
 
 def read_json(file):
     """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
@@ -110,20 +105,23 @@ def read_csvs(experiment, folder):
     return experiment
 
 
-def find_file(type, radius, pressure, noise, rep, surface):
+def find_file(type, radius, pressure, noise, rep, pitch, surface):
     """"""
 
     # A. Build the name of the experiment
     location = os.path.dirname(os.getcwd())
 
-    location = "/home/alejo/Documents"
+    # location = '/media/alejo/DATA'
+    # location = "/home/alejo/Documents"
+    location = '/home/alejo/gripper_ws/src/suction-experiment'
 
     if type == "horizontal":
-        folder = "/data/DATASET2/x_noise/rep" + str(rep + 1) + "/"
+        # folder = "/data/DATASET2/x_noise/rep" + str(rep + 1) + "/"
+        folder = "/data/DATASET3/"
         filename = "horizontal_#" + str(noise) + \
                    "_pres_" + str(pressure) + \
-                   "_surface_3DPrintedPrimer85" + \
-                   "_radius_" + str(radius)
+                   "_surface_3DPrintedPrimer" + \
+                   "_radius_" + str(round(radius, 4))
     elif type == "vertical":
         folder = "/data/DATASET2/z_noise/rep" + str(rep + 1) + "/"
         filename = "vertical_#" + str(noise) + \
@@ -131,7 +129,7 @@ def find_file(type, radius, pressure, noise, rep, surface):
                    "_surface_3DPrintedPrimer85" + \
                    "_radius_" + str(radius)
     elif type == "simple_suction":
-        folder = "/data/simple_suction/"
+        folder = "/data/pressure_check/"
         filename = "simple_suction_#" + str(rep) +\
                     "_pres_" + str(pressure) +\
                     "_surface_" + surface +\
@@ -141,27 +139,37 @@ def find_file(type, radius, pressure, noise, rep, surface):
     # print("\nSearching for:", filename)
 
     # B. Look for the file
-    for f in os.listdir(file_path):
-        if re.match(filename, f) and f.endswith(".bag"):
-            only_filename = f.split(".bag")[0]
-            break
-        else:
-            only_filename = "no_match"
+    if type == "simple_suction":
+        for f in os.listdir(file_path):
+            # if re.match(filename, f) and f.endswith(".bag"):
+            if re.match(filename, f) and f.endswith(".json"):
+                only_filename = f.split(".json")[0]
+                break
+            else:
+                only_filename = "no_match"
+    else:
+        for f in os.listdir(file_path):
+            # if re.match(filename, f) and f.endswith(".bag"):
+            if re.match(filename, f) and f.endswith("pitch_" + str(pitch) + "_rep_" + str(rep) + ".json"):
+                only_filename = f.split(".json")[0]
+                break
+            else:
+                only_filename = "no_match"
     # print(only_filename)
 
     if only_filename == "no_match":
         file = "no_match"
         print("\n", (rep+1))
-        print("Couldn't find :", filename)
+        print("Couldn't find :", (filename + "  " + str(pitch) + "_rep_" + str(rep) + ".json"))
     else:
         file = location + folder + only_filename
 
     return file, only_filename
 
 
-def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, radius, trends='false'):
+def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, pitch, radius, trends='false'):
     if type == "horizontal":
-        plt.errorbar(x_noises, mean_values, std_values, label=(str(pressure) + " PSI"))
+        plt.errorbar(x_noises, mean_values, std_values, label=(str(pressure) + " PSI, " + str(pitch) + 'deg pitch'))
 
         # Trendline
         if trends == 'true':
@@ -269,9 +277,11 @@ class Experiment:
                  radius=37.5,
                  z_noise=0,
                  x_noise=0,
-                 file_source=""):
+                 file_source="",
+                 vacuum_type='absolute'):
 
         self.id = id
+        self.vacuum_type = vacuum_type
 
         # Data from jsons
         self.exp_type = exp_type
@@ -431,7 +441,10 @@ class Experiment:
         # Get the steady state mean and std values
         for time, value in zip(self.pressure_elapsed_time, self.pressure_values):
             if (time > steady_vacuum_start) and (time < steady_vacuum_end):
-                self.steady_pressure_values.append(value - self.atmospheric_pressure)
+                if self.vacuum_type == 'barometric':
+                    self.steady_pressure_values.append(value - self.atmospheric_pressure)
+                elif self.vacuum_type == 'absolute':
+                    self.steady_pressure_values.append(value)
 
         self.steady_vacuum_mean = np.mean(self.steady_pressure_values)
         self.steady_vacuum_std = np.std(self.steady_pressure_values)
@@ -749,6 +762,7 @@ class Experiment:
             plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1)
             plt.text(event, 600, label, rotation=90, color='black')
             plt.xlabel("Elapsed Time [sec]")
+            plt.ylabel("Pressure [hPa]")
 
         plt.grid()
         plt.title(self.filename)
@@ -970,12 +984,165 @@ def noise_experiments(exp_type="vertical"):
     plt.show()
 
 
+def noise_experiments_pitch(exp_type="vertical"):
+
+    plt.figure()
+
+    # --- Controlled variables ---
+    # radius = 0.0425
+    radius = 0.0375
+    # pressures = [50, 60, 70, 80]    #only in dataset1 we did @80psi
+    # pressures = [40, 50, 60, 70]
+    pressure = 60
+    # pitches = [0.0, 15.0, 30.0, 45.0]
+    pitches = [30.0]
+
+    # Number of noise steps implemented for each direction
+    if exp_type == 'vertical':
+        n_noises = 12
+    else:
+        n_noises = 10
+
+    n_reps = 4
+
+    # --- Sweep all the pressures ---
+    for pitch in pitches:
+
+        noises_vacuum_means = []
+        noises_vacuum_stds = []
+        noises_xnoises = []
+        noises_znoises = []
+        noises_zforce_means = []
+        noises_zforce_stds = []
+        noises_xforce_means = []
+        noises_xforce_stds = []
+        noises_ytorque_means = []
+        noises_ytorque_stds = []
+
+        # --- Sweep all the noises ---
+        for noise in range(n_noises):
+
+            reps_xnoises = []
+            reps_znoises = []
+            reps_vacuum_means = []
+            reps_vacuum_stds = []
+            reps_zforce_max = []
+            reps_xforce_max = []
+            reps_ytorque_max = []
+            reps_ytorque_max = []
+
+            # --- Sweep all repetitions ---
+            for rep in range(n_reps):
+
+                # 1. Find file
+                file, only_filename = find_file(exp_type, radius, pressure, noise, (rep+1), pitch, 'surface')
+                if file == "no_match":
+                    continue
+
+                # 2. Turn Bag into csvs if needed
+                if os.path.isdir(file):
+                    pass
+                    # print("csvs already created")
+                else:
+                    bag_to_csvs(file + ".bag")
+
+                # 3. Read attributes from 'json' files
+                metadata = read_json(file + ".json")
+
+                # 4. Read values from 'csv' files for each 'json' file
+                experiment = read_csvs(metadata, file)
+                experiment.filename = only_filename
+
+                # 5. Get different properties for each experiment
+                experiment.get_features()
+                # plt.close('all')
+                experiment.plots_stuff()
+                plt.show()
+
+                # 6. Check if there were any errors during the experiment
+                if len(experiment.errors) > 0:
+                    continue
+
+                # 7. Gather features from all the repetitions of the experiment
+                reps_xnoises.append(experiment.x_noise)
+                reps_znoises.append(experiment.z_noise)
+                reps_vacuum_means.append(round(experiment.steady_vacuum_mean, 2))
+                reps_vacuum_stds.append(round(experiment.steady_vacuum_std, 4))
+                reps_zforce_max.append(experiment.max_detach_zforce)
+                reps_xforce_max.append(experiment.max_detach_xforce)
+                reps_ytorque_max.append(experiment.max_detach_ytorque)
+
+            # --- Once all values are gathered for all repetitions, obtain the mean values
+            if len(reps_vacuum_means) == 0:
+                continue
+            final_x_noise = np.mean(reps_xnoises)
+            final_z_noise = np.mean(reps_znoises)
+            final_vacuum_mean = np.mean(reps_vacuum_means)
+            final_zforce_mean = np.mean(reps_zforce_max)
+            final_zforce_std = np.std(reps_zforce_max)
+            final_xforce_mean = np.mean(reps_xforce_max)
+            final_xforce_std = np.std(reps_xforce_max)
+            final_ytorque_mean = np.mean(reps_ytorque_max)
+            final_ytorque_std = np.std(reps_ytorque_max)
+
+            mean_stds = 0
+            for i in range(len(reps_vacuum_stds)):
+                mean_stds += reps_vacuum_stds[i] ** 2
+            final_vacuum_std = (mean_stds / len(reps_vacuum_stds)) ** 0.5
+
+            noises_vacuum_means.append(round(final_vacuum_mean, 2))
+            noises_vacuum_stds.append(round(final_vacuum_std, 2))
+            noises_xnoises.append(round(final_x_noise, 4))
+            noises_znoises.append(round(final_z_noise, 4))
+            noises_zforce_means.append(round(final_zforce_mean, 2))
+            noises_zforce_stds.append(round(final_zforce_std, 2))
+            noises_xforce_means.append(round(final_xforce_mean, 2))
+            noises_xforce_stds.append(round(final_xforce_std, 2))
+            noises_ytorque_means.append(round(final_ytorque_mean, 2))
+            noises_ytorque_stds.append(round(final_ytorque_std, 2))
+
+        # --- Once all values are collected for all noises, print and plot
+        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
+        #               noises_vacuum_stds, pressure, pitch, radius, 'false')
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
+                      noises_zforce_stds, pressure, pitch, radius, 'false')
+
+        print('\nFeed In Pressure: ', pressure)
+        print('zForce means: ', noises_zforce_means)
+        if exp_type == 'vertical':
+            print('zNoises: ', noises_znoises)
+        else:
+            print('xForce means: ', noises_xforce_means)
+            print('xNoises: ', noises_xnoises)
+
+        # # Save lists into csvs
+        # filename = str(pressure) + "PSI_xnoises"
+        # with open(filename, 'wb') as f:
+        #     write = csv.writer(f, delimiter=',')
+        #     for item in noises_xnoises:
+        #         write.writerow(item)
+
+        # circle_plots(noises_xnoises, 1, radius, noises_xforce_means, noises_zforce_means, pressure)
+
+        # plt.show()
+
+    plt.grid()
+    plt.show()
+
+
 def simple_suction_experiment():
 
     # --- Controlled variables ---
-    pressures = [50, 60, 70, 80]
+    # pressures = [50, 60, 70, 80]
+    pressures = [60]
     surfaces = ['Real_Apple', 'Gloss_Fake_Apple', '3DPrinted_with_Primer', '3DPrinted_with_Primer_85mm']
+    # surfaces = ['Gloss_Fake_Apple_suctionA', 'Gloss_Fake_Apple_suctionB']
+    # surfaces = ['3DPrintedPrimer85_suctionA', '3DPrintedPrimer85_suctionB']
+    surfaces = ['Gloss_Fake_Apple', '3DPrinted_with_Primer_85mm']
     n_reps = 5
+
+    vacuum_type = 'absolute'    # The one given by the sensor
+    # vacuum_type = 'barometric'  # The one given by the sensor minus the atmospheric pressure
 
     figure, axis = plt.subplots(1, 4, figsize=(10, 5))
 
@@ -993,12 +1160,16 @@ def simple_suction_experiment():
             for rep in range(n_reps):
 
                 # 1. Find file
-                file, only_filename = find_file("simple_suction", 10000, pressure, 1000, rep, surface)
+                file, only_filename = find_file("simple_suction", 10000, pressure, 1000, rep, 0.0, surface)
                 if file == "no_match":
                     continue
 
-                # 2. Turn bag into csvs
-                # bag_to_csvs(file + ".bag")
+                # 2. Turn Bag into csvs if needed
+                if os.path.isdir(file):
+                    pass
+                    # print("csvs already created")
+                else:
+                    bag_to_csvs(file + ".bag")
 
                 # 3. Read Attributes from 'json' files
                 metadata = read_json(file + ".json")
@@ -1010,6 +1181,7 @@ def simple_suction_experiment():
                 # 5. Get some features
                 experiment.elapsed_times()
                 experiment.get_atmospheric_pressure()
+                experiment.vacuum_type = vacuum_type
                 experiment.get_steady_vacuum('Steady', "Vacuum Off")
 
                 # 6. Plot each experiment if needed
@@ -1017,14 +1189,20 @@ def simple_suction_experiment():
                 # plt.show()
 
                 # 7. Gather features from all reps.
-                reps_min_vacuums.append(min(experiment.steady_pressure_values))
+                # reps_min_vacuums.append(min(experiment.steady_pressure_values))
+                reps_min_vacuums.append(np.mean(experiment.steady_pressure_values))
 
             # Gather features from all surfaces
             surfaces_min_vacuums.append(reps_min_vacuums)
 
         # Finally plot values for the current pressure
         axis[ctr].boxplot(surfaces_min_vacuums)
-        axis[ctr].set_ylim([-1000, -600])
+        if vacuum_type == 'absolute':
+            axis[ctr].set_ylim([100, 500])
+            # axis[ctr].set_ylim([200, 400])
+        elif vacuum_type == 'barometric':
+            axis[ctr].set_ylim([-1000, -600])
+
         axis[ctr].set_xticklabels(['Real', 'Fake', '3DwithPrimer1', '3DwithPrimer2'], rotation=30, fontsize=8)
         axis[ctr].set_title('FP: %.0d [PSI]' % pressure)
         axis[ctr].set_xlabel('Surface')
@@ -1034,6 +1212,7 @@ def simple_suction_experiment():
         # print(plot_title, surfaces_min_vacuums)
     axis[0].set_ylabel('Pressure [hPa]')
     plt.suptitle('Min Vacuum with different Feeding Pressures (FP)')
+    plt.ylim([250,300])
     plt.show()
 
 
@@ -1072,8 +1251,9 @@ def main():
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
-    # simple_suction_experiment()
-    plot_and_video()
+    # noise_experiments_pitch('horizontal')
+    simple_suction_experiment()
+    # plot_and_video()
 
 
 if __name__ == '__main__':

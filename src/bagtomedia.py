@@ -67,30 +67,44 @@ def main():
 
     # Define folders
     # location = os.path.dirname(os.getcwd())
-    location = "/home/alejo/Documents"
-    in_folder = '/data/samples_with_camera/'
-    out_folder = '/data/samples_with_camera/'
+    # location = "/home/alejo/Documents"
+    # in_folder = '/data/samples_with_camera/'
+    # out_folder = '/data/samples_with_camera/'
     image_topic = '/usb_cam/image_raw'
+    #
+    # input_folder = location + in_folder
+    # output_folder = location + out_folder
 
-    input_folder = location + in_folder
-    output_folder = location + out_folder
+    # # Sweep folder location with bagfiles
+    # for file in sorted(os.listdir(input_folder)):
+    #     if file.endswith(".bag"):
+    #
+    #         only_filename = file.split(".bag")[0]
+    #         output_dir = output_folder + only_filename + "/pngs/"
+    #
+    #         # Create Dir if it doesnt exists
+    #         if not os.path.exists(output_dir):
+    #             os.makedirs(output_dir)
+    #
+    #         # Uncomment for PNGs
+    #         bagToPng(input_folder, file, output_dir, image_topic)
+    #
+    #         # Uncomment for AVIs
+    #         bagToVideo(input_folder, file, output_dir, image_topic, only_filename)
 
-    # Sweep folder location with bagfiles
-    for file in sorted(os.listdir(input_folder)):
-        if file.endswith(".bag"):
 
-            only_filename = file.split(".bag")[0]
-            output_dir = output_folder + only_filename + "/pngs/"
+    # For a single file
+    input_folder = '/media/alejo/DATA/data/DATASET3/'
+    file = 'horizontal_#6_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_22.68_pitch_30.0_rep_2.bag'
+    only_filename = file.split(".bag")[0]
+    output_dir = input_folder + only_filename + "/pngs/"
 
-            # Create Dir if it doesnt exists
-            if not os.path.exists(output_dir):
-                os.makedirs(output_dir)
+    # Create Dir if it doesnt exists
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-            # Uncomment for PNGs
-            bagToPng(input_folder, file, output_dir, image_topic)
-
-            # Uncomment for AVIs
-            bagToVideo(input_folder, file, output_dir, image_topic, only_filename)
+    # Uncomment for PNGs
+    bagToPng(input_folder, file, output_dir, image_topic)
 
 
 if __name__ == '__main__':
