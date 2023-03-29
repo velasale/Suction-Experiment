@@ -65,7 +65,7 @@ sudo apt install ros-noetic-moveit
 3. Launch the lab setup in 1st terminal:
 * With real hardware (ur5, camera, arduino)
 ```console
-roslaunch suctioncup_experiment.launch
+roslaunch suction-experiment suctioncup_experiment.launch
 ```
 * Just simulate in RVIZ
 ```console
