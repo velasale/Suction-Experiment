@@ -854,7 +854,7 @@ def main():
     suction_experiment = SuctionExperiment()
     #suction_experiment.go_preliminary_position()
 
-    # Step 2: Get some info from the user
+    # Step 2: Get inputs from user
     print("\n\n ***** Suction Cups Experiments *****")
     print("a. Type Experiment: 1 (zNoise), 2 (xNoise), 3 (simple suction), or 4 (calibrate zero)")
     experiment = ''
