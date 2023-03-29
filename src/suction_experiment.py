@@ -24,7 +24,6 @@ import moveit_commander
 from moveit_commander.conversions import pose_to_list
 import moveit_msgs.msg
 from moveit_msgs.msg import Constraints, JointConstraint
-
 from std_msgs.msg import String, Int32
 # import sympy as sym
 import tf
@@ -32,6 +31,9 @@ from tf.transformations import euler_from_quaternion, quaternion_about_axis, qua
 import tf2_ros
 import tf2_geometry_msgs  # **Do not use geometry_msgs. Use this instead for PoseStamped
 from visualization_msgs.msg import Marker, MarkerArray
+
+## --- Self developed imports
+from bagfile_reader import *
 
 
 def all_close(goal, actual, tolerance):
@@ -51,6 +53,18 @@ def all_close(goal, actual, tolerance):
         return all_close(pose_to_list(goal), pose_to_list(actual), tolerance)
 
     return True
+
+
+def plot_vacuum(filename):
+    """Simply plots vacuum using methods and functions from bagfile_reader.py"""
+
+    bag_to_csvs(filename + ".bag")
+    metadata = read_json(filename + ".json")
+    experim = read_csvs(metadata, filename)
+    experim.elapsed_times()
+    experim.get_steady_vacuum('Steady', 'Vacuum Off')
+    experim.plot_only_pressure()
+    plt.show()
 
 
 def start_saving_rosbag(name="trial"):
@@ -275,6 +289,15 @@ def x_noise_experiment(suction_experiment):
             suction_experiment.save_metadata(filename)
             print("Saving Metadata")
 
+            # ----------------- Plot data to check vacuum levels --------------
+            # Step 1: Open bagfile
+            print("Vacuum Preview")
+            print(filename)
+            name = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
+            filename = location + foldername + name
+
+            plot_vacuum(filename)
+
 
 def simple_cup_experiment(suction_experiment):   
 
@@ -357,9 +380,18 @@ def simple_cup_experiment(suction_experiment):
         print("Stop recording Rosbag")
         time.sleep(1)
 
-        # ---- Ffinally save the metadata
+        # --- Finally save the metadata
         suction_experiment.save_metadata(filename)
-        print("Saving Metadata")     
+        print("Saving Metadata")
+
+        # ----------------- Plot data to check vacuum levels --------------
+        # Step 1: Open bagfile
+        print("Vacuum Preview")
+        print(filename)
+        name = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
+        filename = location + foldername + name
+
+        plot_vacuum(filename)
 
 
 def calibrate_zero(suction_experiment):
@@ -813,7 +845,6 @@ def main():
 
     # TODO add procedure to check Max vacuum from the very beginning
     # TODO Build ROS package
-    # TODO Add the option to plot results immediately after each experiment
     # TODO arrange better the inputs at the beginning
     # TODO Add a check that the solver found a solution, otherwise try again
     # TODO Parse arguments from command

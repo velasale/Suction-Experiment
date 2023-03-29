@@ -23,7 +23,6 @@ from scipy.ndimage import gaussian_filter, median_filter
 def bag_to_csvs(file):
     """Open all bagfiles in a folder and saves all topics as csvs"""
 
-
     if file.endswith(".bag"):
         print(file)
         bag = bagreader(file)
@@ -41,6 +40,7 @@ def bag_to_csvs(file):
             else:
                 pass
 
+
 def read_json(file):
     """Creates a list of experiments as objects. It then reads their respective json file and adds the metadata as
     attributes to each one of them"""
@@ -55,6 +55,7 @@ def read_json(file):
         # Add metadata as attributes
         experiment.file_source = file
         experiment.exp_type = json_data["generalInfo"]["experimentType"]
+        experiment.repetition = json_data["generalInfo"]["repetition"]
         experiment.surface = json_data["surfaceInfo"]["type"]
 
         experiment.x_noise = abs(json_data["robotInfo"]["x noise real [m]"])
@@ -62,6 +63,8 @@ def read_json(file):
 
         experiment.x_noise_command = abs(json_data["robotInfo"]["x noise command [m]"])
         experiment.z_noise_command = abs(json_data["robotInfo"]["z noise command [m]"])
+
+        experiment.pitch = json_data["robotInfo"]["pitch [rad]"]
 
         try:
             experiment.pressure = json_data["gripperInfo"]["pressureAtValve [PSI]"]
@@ -71,6 +74,8 @@ def read_json(file):
             experiment.surface_radius = json_data["surfaceInfo"]["radius [m]"]
         except KeyError:
             experiment.surface_radius = json_data["surfaceInfo"]["radius"]
+
+
 
         # print(experiment.exp_type)
 
@@ -112,12 +117,13 @@ def find_file(type, radius, pressure, noise, rep, pitch, surface):
     location = os.path.dirname(os.getcwd())
 
     # location = '/media/alejo/DATA'
-    # location = "/home/alejo/Documents"
-    location = '/home/alejo/gripper_ws/src/suction-experiment'
+    # '/home/alejo/Documents/data/DATASET4'
+    location = "/home/alejo/Documents"
+    # location = '/home/alejo/gripper_ws/src/suction-experiment'
 
     if type == "horizontal":
         # folder = "/data/DATASET2/x_noise/rep" + str(rep + 1) + "/"
-        folder = "/data/DATASET3/"
+        folder = "/data/DATASET4/"
         filename = "horizontal_#" + str(noise) + \
                    "_pres_" + str(pressure) + \
                    "_surface_3DPrintedPrimer" + \
@@ -199,10 +205,12 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, p
         title = "Cartesian noise in z, for %.2f mm diameter" % (2000*radius)
         plt.xlabel("z-noise [m]")
 
-    # plt.ylabel("Vacuum [hPa]")
+    plt.ylabel("Vacuum [hPa]")
+    plt.ylim([0, 1000])
     # plt.ylim([-1000, 0])
-    plt.ylabel("Force z [N]")
-    plt.ylim([-1, 7])
+
+    # plt.ylabel("Force z [N]")
+    # plt.ylim([-1, 7])
     # plt.ylabel("Torque [Nm]")
     # plt.ylim([0, 0.5])
     plt.xlim([0, 0.040])
@@ -296,6 +304,8 @@ class Experiment:
         self.pressure_values = []
         self.file_source = file_source
         self.filename = ""
+        self.pitch = 0
+        self.repetition = 0
 
         # Data from csvs
         self.pressure_time_stamp = []
@@ -763,9 +773,18 @@ class Experiment:
             plt.text(event, 600, label, rotation=90, color='black')
             plt.xlabel("Elapsed Time [sec]")
             plt.ylabel("Pressure [hPa]")
+            plt.ylim([0, 1100])
+
+        title_text = "Experiment Type: " + str(self.exp_type) + \
+                     ", F.P.: " + str(self.pressure) + "PSI"\
+                     ", Diameter: " + str(self.surface_radius * 2000) + "mm"\
+                     "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg"\
+                     ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm"\
+                     ", Repetition No: " + str(self.repetition)
 
         plt.grid()
-        plt.title(self.filename)
+        plt.title(self.filename, fontsize=8)
+        plt.suptitle(title_text)
 
     def plot_only_pressure_animated(self):
         """Plots wrench (forces and moments) and pressure readings
@@ -991,9 +1010,10 @@ def noise_experiments_pitch(exp_type="vertical"):
     # --- Controlled variables ---
     # radius = 0.0425
     radius = 0.0375
-    # pressures = [50, 60, 70, 80]    #only in dataset1 we did @80psi
-    # pressures = [40, 50, 60, 70]
+
+    # The pitch was varied only @60PSI
     pressure = 60
+
     # pitches = [0.0, 15.0, 30.0, 45.0]
     pitches = [30.0]
 
@@ -1004,6 +1024,8 @@ def noise_experiments_pitch(exp_type="vertical"):
         n_noises = 10
 
     n_reps = 4
+
+    errors = 0
 
     # --- Sweep all the pressures ---
     for pitch in pitches:
@@ -1041,8 +1063,8 @@ def noise_experiments_pitch(exp_type="vertical"):
 
                 # 2. Turn Bag into csvs if needed
                 if os.path.isdir(file):
-                    pass
                     # print("csvs already created")
+                    pass
                 else:
                     bag_to_csvs(file + ".bag")
 
@@ -1056,11 +1078,14 @@ def noise_experiments_pitch(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                experiment.plots_stuff()
+                # experiment.plots_stuff()
+                experiment.plot_only_pressure()
                 plt.show()
 
                 # 6. Check if there were any errors during the experiment
                 if len(experiment.errors) > 0:
+                    errors += 1
+                    print(errors)
                     continue
 
                 # 7. Gather features from all the repetitions of the experiment
@@ -1102,10 +1127,10 @@ def noise_experiments_pitch(exp_type="vertical"):
             noises_ytorque_stds.append(round(final_ytorque_std, 2))
 
         # --- Once all values are collected for all noises, print and plot
-        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
-        #               noises_vacuum_stds, pressure, pitch, radius, 'false')
-        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
-                      noises_zforce_stds, pressure, pitch, radius, 'false')
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
+                      noises_vacuum_stds, pressure, pitch, radius, 'false')
+        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
+        #               noises_zforce_stds, pressure, pitch, radius, 'false')
 
         print('\nFeed In Pressure: ', pressure)
         print('zForce means: ', noises_zforce_means)
@@ -1212,7 +1237,7 @@ def simple_suction_experiment():
         # print(plot_title, surfaces_min_vacuums)
     axis[0].set_ylabel('Pressure [hPa]')
     plt.suptitle('Min Vacuum with different Feeding Pressures (FP)')
-    plt.ylim([250,300])
+    plt.ylim([250, 300])
     plt.show()
 
 
@@ -1251,8 +1276,8 @@ def main():
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
-    # noise_experiments_pitch('horizontal')
-    simple_suction_experiment()
+    noise_experiments_pitch('horizontal')
+    # simple_suction_experiment()
     # plot_and_video()
 
 
