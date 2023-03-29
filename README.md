@@ -67,7 +67,7 @@ sudo apt install ros-noetic-moveit
 ```console
 roslaunch suction-experiment suctioncup_experiment.launch
 ```
-* Just simulate in RVIZ
+* Or just to visualize in RVIZ
 ```console
 roslaunch apple_proxy pickApp.launch
 ```
