@@ -9,7 +9,7 @@ The following steps were performed under Ubuntu 20.04.5 LTS (Focal Fossa)(https:
 ### Arduino  
 1. Install Arduino  
 2. Search and install the libraries **rosserial** and **adafruit mprls**  
-3. If after compiling there are issues with *cstring*, simply:  
+3. If after compiling you encounter issues with *cstring*, try:  
 open **msg.h**  
 replace `#include <cstring>` with `#include<string.h>`  
 replace `std::memcpy()` with `memcpy()` 
