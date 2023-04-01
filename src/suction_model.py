@@ -73,6 +73,7 @@ def interpolate(x, x0, x1, y0, y1, variable):
 
     return y
 
+
 def data_from_pitch_exp(angle):
     """This data was collected in the pitch experiments"""
 
@@ -109,38 +110,6 @@ def data_from_pitch_exp(angle):
         return pitch_30, pitch_45
 
 
-def for_later():
-
-
-    fig, ax = plt.subplots()
-    # --- Plot Apple
-    ax.add_patch(Circle(apple.center_loc, apple.diameter / 2, color='red', fill=False))
-
-    # --- Plot Suction Cup
-    leftsc.location[1] = apple.center_loc[1] - apple.diameter / 2 - leftsc.rigid_height
-    leftsc.location[0] = apple.center_loc[0]
-    ax.add_patch(Rectangle(leftsc.location, leftsc.rigid_diameter, leftsc.rigid_height,
-                           angle=leftsc.angle,
-                           edgecolor='blue', facecolor='blue', fill=True, lw=1))
-    xloc = leftsc.location[0] + (leftsc.rigid_diameter - leftsc.compliant_diameter) / 2 + \
-           (leftsc.location[1] + leftsc.rigid_height) * math.sin(math.radians(leftsc.angle))
-
-    yloc = (leftsc.location[1] + leftsc.rigid_height) * math.cos(math.radians(leftsc.angle))
-
-    ax.add_patch(Rectangle((xloc, yloc), leftsc.compliant_diameter, leftsc.compliant_height,
-                           angle=leftsc.angle,
-                           edgecolor='blue', facecolor='blue', fill=False, lw=1))
-
-    plt.xlabel("X-AXIS")
-    plt.ylabel("Y-AXIS")
-    plt.title("PLOT-1")
-    plt.grid()
-    plt.ylim([-100, 100])
-    plt.xlim([-100, 100])
-
-    plt.show()
-
-
 def main():
 
     map_forces = []
@@ -149,7 +118,9 @@ def main():
     variable = 'sumForce_means'
 
     # Sweep all possible offsets from the center
-    for distance in range(0, 41, 1):
+    # 37 for 75
+    # 42 for 85
+    for distance in range(0, 42, 1):
         thetas = []
         offsets = []
         zforces_interpolated = []
@@ -217,7 +188,7 @@ def main():
         plt.imshow(new, cmap='Reds', interpolation='nearest', origin='lower')
         plt.title('mean zForce [N] heatmap for Diameter 85mm')
     elif variable == 'Vacuum_means':
-        plt.imshow(new, cmap='binary', interpolation='nearest', origin='lower')
+        plt.imshow(new, cmap='Blues', interpolation='nearest', origin='lower')
         plt.title('mean Vacuum [hPa] heatmap for Diameter 85mm')
 
     plt.colorbar()
