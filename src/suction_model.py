@@ -59,6 +59,19 @@ def data_from_pitch_exp85(angle):
         return pitch_30, pitch_45
 
 
+def interpolate(x, x0, x1, y0, y1, variable):
+    """Linear Interpolation"""
+
+    if y0 != 'Nan' and y1 != 'Nan':
+        y = (x - x0) * (y1 - y0) / (x1 - x0) + y0
+        y = round(y, 2)
+    else:
+        if variable == 'sumForce_means':
+            y = 0
+        elif variable == 'Vacuum_means':
+            y = 1000
+
+    return y
 
 def data_from_pitch_exp(angle):
     """This data was collected in the pitch experiments"""
@@ -130,16 +143,13 @@ def for_later():
 
 def main():
 
-    # TODO interpolate in x for distance, this is for each plot interpolate the forces
-    # TODO watch for the indexing of the data
-
     map_forces = []
 
-    # var = 'Vacuum_means'
-    var = 'sumForce_means'
+    # variable = 'Vacuum_means'
+    variable = 'sumForce_means'
 
     # Sweep all possible offsets from the center
-    for distance in range(0, 40, 1):
+    for distance in range(0, 41, 1):
         thetas = []
         offsets = []
         zforces_interpolated = []
@@ -154,8 +164,8 @@ def main():
 
         for theta in range(min_angle, max_angle, delta):
 
-
             thetas_plot.append(theta)
+
             first, second = data_from_pitch_exp85(theta)
 
             thetas.append(round(theta, 1))
@@ -170,15 +180,10 @@ def main():
 
             x00 = first['xNoises'][first_index - 1]
             x01 = first['xNoises'][first_index]
+            y00 = first[variable][first_index - 1]
+            y01 = first[variable][first_index]
 
-            y00 = first[var][first_index - 1]
-            y01 = first[var][first_index]
-
-            if y00 != 'Nan' and y01 != 'Nan':
-                y = (dist - x00) * (y01 - y00) / (x01 - x00) + y00
-            else:
-                y = 'Nan'
-            y0 = y
+            y0 = interpolate(dist, x00, x01, y00, y01, variable)
 
             for x in second['xNoises']:
                 if x * 1000 > distance:
@@ -186,29 +191,12 @@ def main():
                     break
             x10 = second['xNoises'][first_index - 1]
             x11 = second['xNoises'][first_index]
+            y10 = second[variable][first_index - 1]
+            y11 = second[variable][first_index]
 
-            y10 = second[var][first_index - 1]
-            y11 = second[var][first_index]
-
-            if y10 != 'Nan' and y11 != 'Nan':
-                y = (dist - x10) * (y11 - y10) / (x11 - x10) + y10
-            else:
-                y = 'Nan'
-            y1 = y
+            y1 = interpolate(dist, x10, x11, y10, y11, variable)
 
             # ---- 2nd interpolation: Interpolate the offset from the experiment's data to obtain expected zForce
-            for x in first['xNoises']:
-                if x * 1000 > distance:
-                    first_index = first['xNoises'].index(x)
-                    break
-            for y in second['xNoises']:
-                if y * 1000 > distance:
-                    second_index = second['xNoises'].index(y)
-                    break
-
-            print('First_index: ', first_index)
-            print('Second_Index: ', second_index)
-
             if 0 <= theta < 15:
                 x0 = 0
                 x1 = 15
@@ -219,28 +207,23 @@ def main():
                 x0 = 30
                 x1 = 45
 
-            if y0 != 'Nan' and y1 != 'Nan':
-                # y = y1 + (y0-y1)*(x1 - theta)/(x1-x0)
-                y = (theta - x0) * (y1 - y0) / (x1 - x0) + y0
-                y = round(y, 2)
-            else:
-                y ='Nan'
-
+            y = interpolate(theta, x0, x1, y0, y1, variable)
             zforces_interpolated.append(y)
-
-        print('\nDistance:', distance)
-        print('Tilt Angles:', thetas)
-        print('Resulting offsets:', offsets)
-        print('Expected zForces:', zforces_interpolated)
 
         map_forces.append(zforces_interpolated)
 
-    print(len(zforces_interpolated), len(thetas_plot))
-
     new = np.transpose(map_forces)
-    fig = px.imshow(new, y=thetas_plot, color_continuous_scale='Blues', aspect='auto')
-    fig.update_traces(colorbar_orientation='v', selector=dict(type='heatmap'))
-    fig.show()
+    if variable == 'sumForce_means':
+        plt.imshow(new, cmap='Reds', interpolation='nearest', origin='lower')
+        plt.title('mean zForce [N] heatmap for Diameter 85mm')
+    elif variable == 'Vacuum_means':
+        plt.imshow(new, cmap='binary', interpolation='nearest', origin='lower')
+        plt.title('mean Vacuum [hPa] heatmap for Diameter 85mm')
+
+    plt.colorbar()
+    plt.xlabel('Offset from center [mm]')
+    plt.ylabel('Tilt angle [deg]')
+    plt.show()
 
 
 if __name__ == '__main__':
