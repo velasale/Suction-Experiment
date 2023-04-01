@@ -238,7 +238,7 @@ def main():
     print(len(zforces_interpolated), len(thetas_plot))
 
     new = np.transpose(map_forces)
-    fig = px.imshow(new, y=thetas_plot, color_continuous_scale='Blues', aspect='auto', interpolation='nearest')
+    fig = px.imshow(new, y=thetas_plot, color_continuous_scale='Blues', aspect='auto')
     fig.update_traces(colorbar_orientation='v', selector=dict(type='heatmap'))
     fig.show()
 
