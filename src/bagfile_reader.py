@@ -18,6 +18,7 @@ import numpy as np
 
 from sklearn.metrics import r2_score
 from scipy.ndimage import gaussian_filter, median_filter
+import pyautogui
 
 
 def bag_to_csvs(file):
@@ -120,10 +121,12 @@ def find_file(type, radius, pressure, noise, rep, pitch, surface):
     # '/home/alejo/Documents/data/DATASET4'
     location = "/home/alejo/Documents"
     # location = '/home/alejo/gripper_ws/src/suction-experiment'
+    # location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl'
+    location = '/home/alejo/Documents'
 
     if type == "horizontal":
         # folder = "/data/DATASET2/x_noise/rep" + str(rep + 1) + "/"
-        folder = "/data/DATASET4/"
+        folder = "/data/DATASET4AND5/"
         filename = "horizontal_#" + str(noise) + \
                    "_pres_" + str(pressure) + \
                    "_surface_3DPrintedPrimer" + \
@@ -175,6 +178,9 @@ def find_file(type, radius, pressure, noise, rep, pitch, surface):
 
 def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, pitch, radius, trends='false'):
     if type == "horizontal":
+        # print("x_noises: ", x_noises)
+        # print("y_values: ", mean_values)
+        std_values = 0
         plt.errorbar(x_noises, mean_values, std_values, label=(str(pressure) + " PSI, " + str(pitch) + 'deg pitch'))
 
         # Trendline
@@ -205,17 +211,18 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, p
         title = "Cartesian noise in z, for %.2f mm diameter" % (2000*radius)
         plt.xlabel("z-noise [m]")
 
-    plt.ylabel("Vacuum [hPa]")
-    plt.ylim([0, 1000])
+    # plt.ylabel("Vacuum [hPa]")
+    # plt.ylim([0, 1100])
     # plt.ylim([-1000, 0])
 
-    # plt.ylabel("Force z [N]")
-    # plt.ylim([-1, 7])
+    plt.ylabel("Force z [N]")
+    plt.ylim([-1, 7])
+
     # plt.ylabel("Torque [Nm]")
     # plt.ylim([0, 0.5])
-    plt.xlim([0, 0.040])
+    plt.xlim([0, 0.045])
     plt.legend()
-    plt.grid()
+    # plt.grid()
     plt.title(title)
 
 
@@ -321,6 +328,7 @@ class Experiment:
         self.wrench_yforce_relative_values = []
         self.wrench_zforce_values = []
         self.wrench_zforce_relative_values = []
+        self.wrench_sumforce_relative_values = []
 
         self.wrench_xtorque_values = []
         self.wrench_xtorque_relative_values = []
@@ -348,6 +356,8 @@ class Experiment:
         self.max_detach_yforce_time = 0
         self.max_detach_zforce = 0
         self.max_detach_zforce_time = 0
+        self.max_detach_sumforce = 0
+        self.max_detach_sumforce_time = 0
 
         self.max_detach_ytorque = 0
         self.max_detach_ytorque_time = 0
@@ -469,12 +479,14 @@ class Experiment:
             relative_zforce = self.wrench_zforce_values[i] - self.wrench_zforce_values[0]
             relative_yforce = self.wrench_yforce_values[i] - self.wrench_yforce_values[0]
             relative_xforce = self.wrench_xforce_values[i] - self.wrench_xforce_values[0]
+            relative_sumforce = math.sqrt(relative_zforce ** 2 + relative_xforce ** 2)
             relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
             relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
             relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
             self.wrench_zforce_relative_values.append(relative_zforce)
             self.wrench_yforce_relative_values.append(relative_yforce)
             self.wrench_xforce_relative_values.append(relative_xforce)
+            self.wrench_sumforce_relative_values.append(relative_sumforce)
             self.wrench_ztorque_relative_values.append(relative_ztorque)
             self.wrench_ytorque_relative_values.append(relative_ytorque)
             self.wrench_xtorque_relative_values.append(relative_xtorque)
@@ -500,9 +512,10 @@ class Experiment:
         zforce_detach_values = []
         nforce_detach_values = []
         tforce_detach_values = []
+        sumforce_detach_values = []
 
-        list_of_detach_values = [xforce_detach_values, ytorque_detach_values, zforce_detach_values, nforce_detach_values, tforce_detach_values]
-        list_of_values = [self.wrench_xforce_relative_values, self.wrench_ytorque_relative_values, self.wrench_zforce_relative_values, self.normal_force_values, self.tangent_force_values]
+        list_of_detach_values = [xforce_detach_values, ytorque_detach_values, zforce_detach_values, nforce_detach_values, tforce_detach_values, sumforce_detach_values]
+        list_of_values = [self.wrench_xforce_relative_values, self.wrench_ytorque_relative_values, self.wrench_zforce_relative_values, self.normal_force_values, self.tangent_force_values, self.wrench_sumforce_relative_values]
 
         list_of_max_values = []
         list_of_max_times = []
@@ -539,6 +552,9 @@ class Experiment:
         self.max_detach_nforce_time = list_of_max_times[3]
         self.max_detach_tforce = list_of_min_values[4]
         self.max_detach_tforce_time = list_of_min_times[4]
+        self.max_detach_sumforce = list_of_max_values[5]
+        self.max_detach_sumforce_time = list_of_max_times[5]
+
 
         return self.max_detach_zforce, self.max_detach_xforce
 
@@ -631,6 +647,7 @@ class Experiment:
         xforce_values = self.wrench_xforce_relative_values
         yforce_values = self.wrench_yforce_relative_values
         zforce_values = self.wrench_zforce_relative_values
+        sumforce_values = self.wrench_sumforce_relative_values
 
         nforce_values = self.normal_force_values
         tforce_values = self.tangent_force_values
@@ -655,6 +672,8 @@ class Experiment:
         max_nforce_time = self.max_detach_nforce_time
         max_tforce_val = self.max_detach_tforce
         max_tforce_time = self.max_detach_tforce_time
+        max_sumforce_val = self.max_detach_sumforce
+        max_sumforce_time = self.max_detach_sumforce_time
 
         # --- Labels, limits and other annotations ---
         figure, axis = plt.subplots(4, 3, figsize=(16, 9))
@@ -695,6 +714,9 @@ class Experiment:
         axis[2, 2].annotate('Max tForce:' + str(round(max_tforce_val, 3)), xy=(max_tforce_time, max_tforce_val),
                             xycoords='data', xytext=(max_tforce_time - 0.5, max_tforce_val -3),
                             va='top', ha='right', arrowprops=dict(facecolor='gray', shrink=0))
+        axis[0, 2].annotate('Max sumForce:' + str(round(max_sumforce_val, 3)), xy=(max_sumforce_time, max_sumforce_val),
+                            xycoords='data', xytext=(max_sumforce_time - 0.5, max_sumforce_val + 10),
+                            va='top', ha='right', arrowprops=dict(facecolor='gray', shrink=0))
 
         # --- Add error in the title if there was any ---
         try:
@@ -702,6 +724,7 @@ class Experiment:
         except IndexError:
             error_type = "data looks good"
         figure.suptitle(self.filename + "\n\n" + error_type)
+        print(self.filename)
 
         # --- Labels, limits and other annotations ---
         yvalues = [ztorque_values, ytorque_values, xtorque_values, pressure_values]
@@ -731,31 +754,31 @@ class Experiment:
                     axis[i, 1].set_xlabel("Elapsed Time [sec]")
 
         # --- Labels, limits and other annotations ---
-        yvalues = [nforce_values, tforce_values, pressure_values]
-        xvalues = [force_time, force_time, pressure_time]
-        ylabels = ["normal Force [N]", "Tangential Force [N]", "Pressure [hPa]"]
-        ylims = [[-22, 15], [-5, 5], [0, 1100]]
-        colors = ['orange', 'gray', 'black']
+        yvalues = [sumforce_values, nforce_values, tforce_values, pressure_values]
+        xvalues = [force_time, force_time, force_time, pressure_time]
+        ylabels = ["sum Force [N]", "normal Force [N]", "Tangential Force [N]", "Pressure [hPa]"]
+        ylims = [[-22, 15], [-22, 15], [-5, 5], [0, 1100]]
+        colors = ['blue', 'orange', 'gray', 'black']
 
         for i in range(len(yvalues)):
-            axis[i+1, 2].plot(xvalues[i], yvalues[i], colors[i])
-            axis[i+1, 2].axvline(x=max_xforce_time, color='red', linestyle='dashed', linewidth=1)
-            axis[i+1, 2].axvline(x=max_zforce_time, color='blue', linestyle='dashed', linewidth=1)
-            axis[i+1, 2].axvline(x=max_nforce_time, color='orange', linestyle='dashed', linewidth=1)
-            axis[i+1, 2].axvline(x=max_tforce_time, color='gray', linestyle='dashed', linewidth=1)
-            axis[i+1, 2].grid()
-            axis[i+1, 2].set_ylabel(ylabels[i])
+            axis[i, 2].plot(xvalues[i], yvalues[i], colors[i])
+            axis[i, 2].axvline(x=max_xforce_time, color='red', linestyle='dashed', linewidth=1)
+            axis[i, 2].axvline(x=max_zforce_time, color='blue', linestyle='dashed', linewidth=1)
+            axis[i, 2].axvline(x=max_nforce_time, color='orange', linestyle='dashed', linewidth=1)
+            axis[i, 2].axvline(x=max_tforce_time, color='gray', linestyle='dashed', linewidth=1)
+            axis[i, 2].grid()
+            axis[i, 2].set_ylabel(ylabels[i])
 
-            axis[i+1, 2].yaxis.set_label_position("left")
-            axis[i+1, 2].yaxis.tick_left()
+            axis[i, 2].yaxis.set_label_position("left")
+            axis[i, 2].yaxis.tick_left()
 
-            axis[i+1, 2].set_ylim(ylims[i])
+            axis[i, 2].set_ylim(ylims[i])
             # Add vertical lines at the events
             for event, label in zip(event_x, event_y):
-                axis[i+1, 2].axvline(x=event, color='black', linestyle='dotted', linewidth=1)
-                if i+1 == (len(axis) - 1):
-                    axis[i+1, 2].text(event, 0, label, rotation=90, color='black')
-                    axis[i+1, 2].set_xlabel("Elapsed Time [sec]")
+                axis[i, 2].axvline(x=event, color='black', linestyle='dotted', linewidth=1)
+                if i == (len(axis) - 1):
+                    axis[i, 2].text(event, 0, label, rotation=90, color='black')
+                    axis[i, 2].set_xlabel("Elapsed Time [sec]")
 
     def plot_only_pressure(self):
         """Plots wrench (forces and moments) and pressure readings"""
@@ -775,18 +798,26 @@ class Experiment:
             plt.ylabel("Pressure [hPa]")
             plt.ylim([0, 1100])
 
+        # --- Add error in the title if there was any ---
+        try:
+            error_type = self.errors[0]
+        except IndexError:
+            error_type = "data looks good"
+        plt.suptitle(self.filename + "\n\n" + error_type)
+        print(self.filename)
+
         title_text = "Experiment Type: " + str(self.exp_type) + \
-                     ", F.P.: " + str(self.pressure) + "PSI"\
-                     ", Diameter: " + str(self.surface_radius * 2000) + "mm"\
-                     "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg"\
-                     ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm"\
+                     ", F.P.: " + str(self.pressure) + "PSI" \
+                     ", Diameter: " + str(self.surface_radius * 2000) + "mm" \
+                     "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg" \
+                     ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm" \
                      ", Repetition No: " + str(self.repetition)
 
         plt.grid()
-        plt.title(self.filename, fontsize=8)
+        plt.title(self.filename + "\n" + error_type, fontsize=8)
         plt.suptitle(title_text)
 
-    def plot_only_pressure_animated(self):
+    def plot_only_pressure_animated(self, location, filename):
         """Plots wrench (forces and moments) and pressure readings
         Refs:https://stackoverflow.com/questions/61808191/is-there-an-easy-way-to-animate-a-scrolling-vertical-line-in-matplotlib
         """
@@ -796,10 +827,6 @@ class Experiment:
 
         event_x = self.event_elapsed_time
         event_y = self.event_values
-
-        location = '/home/alejo/Documents/data/samples_with_camera/'
-        filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
-        filename = 'vertical_#10_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_-10.83'
 
         # Sort png files in a list
         lst = os.listdir(location + filename + '/pngs')
@@ -819,8 +846,7 @@ class Experiment:
         ax[0].set_ylabel('Pressure [hPa]')
         plt.ion()
         plt.show()
-
-
+        plt.title(filename, loc='right')
 
         # Remove details from ax[1] because we are displaying only the image
         ax[1].xaxis.set_visible(False)
@@ -841,6 +867,12 @@ class Experiment:
             ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
             ax[1].add_artist(ab)
             plt.pause(0.025)
+
+            # # Save the figure window into an avi file
+            # img = pyautogui.screenshot()
+            # frame = np.array(img)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # out,write(frame)
 
             # if out is None:
             #     out = cv2.VideoWriter(location + filename + '/trial.avi', cv2.VideoWriter_fourcc(*'MP4V'), 40, (640, 480))
@@ -1008,14 +1040,14 @@ def noise_experiments_pitch(exp_type="vertical"):
     plt.figure()
 
     # --- Controlled variables ---
-    # radius = 0.0425
-    radius = 0.0375
+    radius = 0.0425
+    # radius = 0.0375
 
     # The pitch was varied only @60PSI
     pressure = 60
 
-    # pitches = [0.0, 15.0, 30.0, 45.0]
-    pitches = [30.0]
+    pitches = [0.0, 15.0, 30.0, 45.0]
+    # pitches = [30.0]
 
     # Number of noise steps implemented for each direction
     if exp_type == 'vertical':
@@ -1023,7 +1055,7 @@ def noise_experiments_pitch(exp_type="vertical"):
     else:
         n_noises = 10
 
-    n_reps = 4
+    n_reps = 8
 
     errors = 0
 
@@ -1040,6 +1072,8 @@ def noise_experiments_pitch(exp_type="vertical"):
         noises_xforce_stds = []
         noises_ytorque_means = []
         noises_ytorque_stds = []
+        noises_sumforce_means = []
+        noises_sumforce_stds = []
 
         # --- Sweep all the noises ---
         for noise in range(n_noises):
@@ -1052,6 +1086,7 @@ def noise_experiments_pitch(exp_type="vertical"):
             reps_xforce_max = []
             reps_ytorque_max = []
             reps_ytorque_max = []
+            reps_sumforce_max = []
 
             # --- Sweep all repetitions ---
             for rep in range(n_reps):
@@ -1079,23 +1114,34 @@ def noise_experiments_pitch(exp_type="vertical"):
                 experiment.get_features()
                 # plt.close('all')
                 # experiment.plots_stuff()
-                experiment.plot_only_pressure()
-                plt.show()
+                # experiment.plot_only_pressure()
+                # plt.show()
 
-                # 6. Check if there were any errors during the experiment
+                # 6. Check if there were any errors during the experiment and
+                # gather features from all the repetitions of the experiment
+
                 if len(experiment.errors) > 0:
                     errors += 1
                     print(errors)
                     continue
+                    # reps_xnoises.append(experiment.x_noise_command)
+                    # reps_znoises.append(experiment.z_noise_command)
+                    # reps_vacuum_means.append(experiment.atmospheric_pressure)
+                    # reps_vacuum_stds.append('Nan')
+                    # reps_zforce_max.append('Nan')
+                    # reps_xforce_max.append('Nan')
+                    # reps_ytorque_max.append('Nan')
+                    # reps_sumforce_max.append('Nan')
 
-                # 7. Gather features from all the repetitions of the experiment
-                reps_xnoises.append(experiment.x_noise)
-                reps_znoises.append(experiment.z_noise)
-                reps_vacuum_means.append(round(experiment.steady_vacuum_mean, 2))
-                reps_vacuum_stds.append(round(experiment.steady_vacuum_std, 4))
-                reps_zforce_max.append(experiment.max_detach_zforce)
-                reps_xforce_max.append(experiment.max_detach_xforce)
-                reps_ytorque_max.append(experiment.max_detach_ytorque)
+                else:
+                    reps_xnoises.append(experiment.x_noise)
+                    reps_znoises.append(experiment.z_noise)
+                    reps_vacuum_means.append(round(experiment.steady_vacuum_mean, 2))
+                    reps_vacuum_stds.append(round(experiment.steady_vacuum_std, 4))
+                    reps_zforce_max.append(experiment.max_detach_zforce)
+                    reps_xforce_max.append(experiment.max_detach_xforce)
+                    reps_ytorque_max.append(experiment.max_detach_ytorque)
+                    reps_sumforce_max.append(experiment.max_detach_sumforce)
 
             # --- Once all values are gathered for all repetitions, obtain the mean values
             if len(reps_vacuum_means) == 0:
@@ -1109,6 +1155,8 @@ def noise_experiments_pitch(exp_type="vertical"):
             final_xforce_std = np.std(reps_xforce_max)
             final_ytorque_mean = np.mean(reps_ytorque_max)
             final_ytorque_std = np.std(reps_ytorque_max)
+            final_sumforce_mean = np.mean(reps_sumforce_max)
+            final_sumforce_std = np.std(reps_sumforce_max)
 
             mean_stds = 0
             for i in range(len(reps_vacuum_stds)):
@@ -1125,15 +1173,22 @@ def noise_experiments_pitch(exp_type="vertical"):
             noises_xforce_stds.append(round(final_xforce_std, 2))
             noises_ytorque_means.append(round(final_ytorque_mean, 2))
             noises_ytorque_stds.append(round(final_ytorque_std, 2))
+            noises_sumforce_means.append(round(final_sumforce_mean, 2))
+            noises_sumforce_stds.append(round(final_sumforce_std, 2))
 
         # --- Once all values are collected for all noises, print and plot
-        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
-                      noises_vacuum_stds, pressure, pitch, radius, 'false')
+        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
+        #               noises_vacuum_stds, pressure, pitch, radius, 'false')
         # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
         #               noises_zforce_stds, pressure, pitch, radius, 'false')
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_sumforce_means,
+                      noises_sumforce_stds, pressure, pitch, radius, 'false')
 
         print('\nFeed In Pressure: ', pressure)
-        print('zForce means: ', noises_zforce_means)
+        print('Vacuum means: ', noises_vacuum_means)
+        print('Vacuum stds: ', noises_vacuum_stds)
+
+        print('sumForce means: ', noises_sumforce_means)
         if exp_type == 'vertical':
             print('zNoises: ', noises_znoises)
         else:
@@ -1245,9 +1300,8 @@ def plot_and_video():
     """Method to run a vertical line on a plot and a video"""
 
     # --- Give File
-    location = '/home/alejo/Documents/data/samples_with_camera/'
-    filename = 'horizontal_#5_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_20.8'
-    filename = 'vertical_#10_pres_70_surface_3DPrintedPrimer_radius_0.0425_noise_-10.83'
+    location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
+    filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
 
     # --- Open Bag file
     # bag_to_csvs(location + filename + ".bag")
@@ -1265,13 +1319,13 @@ def plot_and_video():
     experiment.get_steady_vacuum('Steady', "Vacuum Off")
 
     # 6. Plot each experiment if needed
-    experiment.plot_only_pressure_animated()
+    experiment.plot_only_pressure_animated(location, filename)
     plt.show()
 
 
 def main():
 
-    # TODO Interpret moments. Consider that the lever is the height of the rig
+    # TODO Interpret moments (lever = height of the rig)
 
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')

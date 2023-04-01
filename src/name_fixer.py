@@ -2,23 +2,21 @@
 import os
 
 # Paste files location
-location = '/home/alejo/gripper_ws/src/suction-experiment/data'
-
+location = '/home/alejo/Documents/data/DATASET5/'
 reps = 1
 
 for i in range(reps):
 
-    # folder = "/data/DATASET2/x_noise/rep" + str(i + 1) + "/"
     folder = '/'
 
     for f in os.listdir(location + folder):
 
-        old_text = 'TRIAL1'
-        new_text = 'Gloss_Fake_cupA'
+        old_text = 'rep_4'
+        new_text = 'rep_8'
 
         if old_text in f:
             old = f
+            print(old)
             new = old.replace(old_text, new_text)
             os.rename(location + folder + old, location + folder + new)
-            print(old)
             print(new)

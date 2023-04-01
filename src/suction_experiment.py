@@ -203,7 +203,7 @@ def x_noise_experiment(suction_experiment):
     noise_res = 1.4 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
 
     # Step 2: Add noise
-    for step in range(steps):
+    for step in range(7, steps):
 
         suction_experiment.step = step
 
@@ -214,7 +214,7 @@ def x_noise_experiment(suction_experiment):
         suction_experiment.noise_z_command = suction_experiment.calc_vertical_noise()
         pitch_for_filename = round(math.degrees(suction_experiment.pitch), 2)
 
-        for rep in range(3, reps_at_each_step):
+        for rep in range(0, reps_at_each_step):
 
             suction_experiment.repetition = rep + 1
 
@@ -228,6 +228,9 @@ def x_noise_experiment(suction_experiment):
             # --- Start Recording Rosbag file
             location = os.path.dirname(os.getcwd())
             foldername = "/data/"
+            location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data'
+            # location = '/media/alejo/DATA/data'
+            foldername = '/DATASET5/'
             name = suction_experiment.experiment_type \
                    + "_#" + str(step) \
                    + "_pres_" + str(suction_experiment.pressureAtValve) \
@@ -291,17 +294,13 @@ def x_noise_experiment(suction_experiment):
 
             # ----------------- Plot data to check vacuum levels --------------
             # Step 1: Open bagfile
-            print("Vacuum Preview")
-            print(filename)
-            name = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
-            filename = location + foldername + name
-
-            plot_vacuum(filename)
+            # print("Vacuum Preview")
+            # plot_vacuum(filename)
 
 
 def simple_cup_experiment(suction_experiment):   
 
-    steps = 5
+    steps = 10
     # noise = suction_experiment.SPHERE_RADIUS / steps
     noise_res = suction_experiment.SUCTION_CUP_SPEC / steps
 
@@ -314,8 +313,11 @@ def simple_cup_experiment(suction_experiment):
         # noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
         
         # --- Start Recording Rosbag file
-        location = os.path.dirname(os.getcwd())        
+        location = os.path.dirname(os.getcwd())
         foldername = "/data/"
+        location = '/media/alejo/DATA/data'
+        foldername = '/DATASET5/'
+
         name = suction_experiment.experiment_type \
                 + "_#" + str(step) \
                 + "_pres_" + str(suction_experiment.pressureAtValve) \
@@ -388,8 +390,8 @@ def simple_cup_experiment(suction_experiment):
         # Step 1: Open bagfile
         print("Vacuum Preview")
         print(filename)
-        name = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
-        filename = location + foldername + name
+        # name = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
+        # filename = location + foldername + name
 
         plot_vacuum(filename)
 
@@ -844,7 +846,6 @@ class SuctionExperiment():
 def main():
 
     # TODO add procedure to check Max vacuum from the very beginning
-    # TODO Build ROS package
     # TODO arrange better the inputs at the beginning
     # TODO Add a check that the solver found a solution, otherwise try again
     # TODO Parse arguments from command
@@ -862,8 +863,9 @@ def main():
         experiment = input()        
     suction_experiment.experiment_type = str(experiment)
 
-    print("b. Type of Surface:")
-    suction_experiment.SURFACE = str(input())
+    # print("b. Type of Surface:")
+    # suction_experiment.SURFACE = str(input())
+    suction_experiment.SURFACE = "3DPrintedPrimer"
 
     print("c. Pressure at the Valve [PSI]): ")
     print("Tip: If the desired pressure is lower than the current one (at the pressure regulator),\n then first pass that pressure and the go up to the desired pressure")
