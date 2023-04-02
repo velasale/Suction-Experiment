@@ -233,6 +233,7 @@ def main():
     for i in range(rows):
         for j in range(cols):
             accu = 0
+            cnt = 0
             # For each cell perform a "radar" sum
             for k in range(i-radius, i+radius, 1):
                 if k < 0 or k > (rows - 1):
@@ -249,15 +250,16 @@ def main():
                         continue
 
                     accu += means[k, l]
+                    cnt += 1
 
-            radar[i,j] = accu
+            radar[i,j] = accu / cnt
 
     plt.figure()
     plt.imshow(radar, cmap='Reds', interpolation='nearest', origin='lower')
     plt.colorbar()
     plt.ylabel('Tilt angle [deg]')
     plt.xlabel('Offset from center [mm]')
-    plt.title('Radar Sum-of-values in a radius of ' + str(radius))
+    plt.title('Radar mean-of-values within a radius of ' + str(radius))
 
     # Show max
     for th in range(30):
