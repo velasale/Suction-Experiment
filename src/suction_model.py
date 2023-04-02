@@ -201,10 +201,13 @@ def main():
 
     first = results[0]
     second = results[1]
-    means = np.zeros((45, 45))
+    rows = 45
+    cols = 42
+
+    means = np.zeros((rows, cols))
 
     for i in range(first.shape[0]):
-        for j in range(second.shape[1]):
+        for j in range(first.shape[1]):
             try:
                 val = (first[i, j] + second[i, j]) / 2
             except IndexError:
@@ -223,7 +226,57 @@ def main():
     plt.ylabel('Tilt angle [deg]')
     plt.xlabel('Offset from center [mm]')
 
+    # -------- Radar Plot ----------
+
+    radar = np.zeros((rows, cols))
+    radius = 10
+    for i in range(rows):
+        for j in range(cols):
+            accu = 0
+            # For each cell perform a "radar" sum
+            for k in range(i-radius, i+radius, 1):
+                if k < 0 or k > (rows - 1):
+                    continue
+
+                x = i - k
+                y = int(math.sqrt(radius ** 2 - x ** 2))
+
+                min = j - y
+                max = j + y
+
+                for l in range(min, max, 1):
+                    if l < 0 or l > (cols - 1):
+                        continue
+
+                    accu += means[k, l]
+
+            radar[i,j] = accu
+
+    plt.figure()
+    plt.imshow(radar, cmap='Reds', interpolation='nearest', origin='lower')
+    plt.colorbar()
+    plt.ylabel('Tilt angle [deg]')
+    plt.xlabel('Offset from center [mm]')
+    plt.title('Radar Sum-of-values in a radius of ' + str(radius))
+
+    # Show max
+    for th in range(30):
+        threshold = th
+        sub_array = radar[:, threshold:cols]
+        if variable == 'Vacuum_means':
+            max_value = sub_array.min()
+        elif variable == 'sumForce_means':
+            max_value = sub_array.max()
+
+        index = np.where(radar == max_value)
+        print(round(max_value,0), index)
+
+        plt.text(index[1], index[0], '*', color='yellow')
+
     plt.show()
+
+
+
 
 
 if __name__ == '__main__':
