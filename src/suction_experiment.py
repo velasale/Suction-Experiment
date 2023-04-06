@@ -134,8 +134,10 @@ def z_noise_experiment(suction_experiment):
             # time.sleep(0.01)
 
             # --- Start Recording Rosbag file
-            location = os.path.dirname(os.getcwd())
-            foldername = "/data/"
+            # location = os.path.dirname(os.getcwd())
+            # foldername = "/data/"
+            location = '/media/alejo/DATA/data/'
+            foldername = ''
             name = suction_experiment.experiment_type \
                     + "_#" + str(step) \
                     + "_pres_" + str(suction_experiment.pressureAtValve) \
@@ -174,7 +176,7 @@ def z_noise_experiment(suction_experiment):
             time.sleep(2)
 
             # --- Retrieve from surface
-            print("Retreieving from surface")
+            print("Retrieving from surface")
             suction_experiment.publish_event("Retrieve")
             move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC * math.cos(suction_experiment.pitch))
             print("Move 4:",move4)
@@ -189,11 +191,16 @@ def z_noise_experiment(suction_experiment):
             # --- Stop recording
             terminate_saving_rosbag(command, rosbag_process)
             print("Stop recording Rosbag")
-            time.sleep(0.1)
+            time.sleep(1)
 
             # --- Finally save the metadata
             suction_experiment.save_metadata(filename)
             print("Saving Metadata")
+
+            # ----------------- Plot data to check vacuum levels --------------
+            # Step 1: Open bagfile
+            print("Vacuum Preview")
+            plot_vacuum(filename)
 
 
 def x_noise_experiment(suction_experiment):
@@ -203,7 +210,7 @@ def x_noise_experiment(suction_experiment):
     noise_res = 1.4 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
 
     # Step 2: Add noise
-    for step in range(7, steps):
+    for step in range(0, steps):
 
         suction_experiment.step = step
 
@@ -226,11 +233,11 @@ def x_noise_experiment(suction_experiment):
             # time.sleep(0.01)
 
             # --- Start Recording Rosbag file
-            location = os.path.dirname(os.getcwd())
-            foldername = "/data/"
-            location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data'
-            # location = '/media/alejo/DATA/data'
-            foldername = '/DATASET5/'
+            # location = os.path.dirname(os.getcwd())
+            # foldername = "/data/"
+            # location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data'
+            location = '/media/alejo/DATA/data/'
+            foldername = ''
             name = suction_experiment.experiment_type \
                    + "_#" + str(step) \
                    + "_pres_" + str(suction_experiment.pressureAtValve) \
@@ -271,7 +278,7 @@ def x_noise_experiment(suction_experiment):
             time.sleep(2)
 
             # --- Retrieve from surface
-            print("Retreieving from surface")
+            print("Retrieving from surface")
             suction_experiment.publish_event("Retrieve")
             move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC * 1.5) # a bit more to avoid hitting when going to starting point
             print("Move 4:",move4)
@@ -294,8 +301,8 @@ def x_noise_experiment(suction_experiment):
 
             # ----------------- Plot data to check vacuum levels --------------
             # Step 1: Open bagfile
-            # print("Vacuum Preview")
-            # plot_vacuum(filename)
+            print("Vacuum Preview")
+            plot_vacuum(filename)
 
 
 def simple_cup_experiment(suction_experiment):   
