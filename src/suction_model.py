@@ -108,7 +108,6 @@ def data_from_pitch_exp(angle, diameter):
             return pitch_30_85, pitch_45_85
 
 
-
 def main():
 
     map_forces = []
@@ -116,13 +115,16 @@ def main():
     # variable = 'Vacuum_means'
     variable = 'sumForce_means'
 
+    FONTSIZE = 16
+    TICKSIZE = 14
+    FIGURESIZE = (6, 5)
 
     results = []
     diameters = [75, 85]
 
     for diameter in diameters:
 
-        plt.figure()
+        plt.figure(figsize=FIGURESIZE)
         map_forces = []
 
         # Sweep all possible offsets from the center
@@ -191,17 +193,23 @@ def main():
             plt.imshow(new, cmap='Blues', interpolation='nearest', origin='lower')
             plt.title('mean Vacuum [hPa] heatmap for Diameter' + str(diameter) + 'mm')
 
-        plt.colorbar()
-        plt.ylabel('Tilt angle [deg]')
-        plt.xlabel('Offset from center [mm]')
+        cbar = plt.colorbar()
+        cbar.set_label('Force [N]', rotation=90, fontsize=FONTSIZE)
+        # https://stackoverflow.com/questions/40184696/change-fontsize-of-colorbars-in-matplotlib
+        for t in cbar.ax.get_yticklabels():
+            t.set_fontsize(TICKSIZE)
+
+        plt.ylabel('Tilt angle [deg]', fontsize=FONTSIZE)
+        plt.xlabel('Offset from center [mm]', fontsize=FONTSIZE)
+        plt.xticks(size=TICKSIZE)
+        plt.yticks(size=TICKSIZE)
 
         results.append(new)
         print(len(new[0]))
 
-
     first = results[0]
     second = results[1]
-    rows = 45
+    rows = 46
     cols = 42
 
     means = np.zeros((rows, cols))
@@ -214,26 +222,34 @@ def main():
                 val = (0 + second[i, j]) / 2
             means[i, j] = val
 
-    plt.figure()
+    plt.figure(figsize=FIGURESIZE)
     if variable == 'sumForce_means':
         plt.imshow(means, cmap='Reds', interpolation='nearest', origin='lower')
-        plt.title('mean zForce [N] heatmap')
+
+        plt.title('mean zForce [N] heatmap', fontsize=FONTSIZE)
     elif variable == 'Vacuum_means':
         plt.imshow(means, cmap='Blues', interpolation='nearest', origin='lower')
-        plt.title('mean Vacuum [hPa] heatmap')
+        plt.title('mean Vacuum [hPa] heatmap', fontsize=FONTSIZE)
 
-    plt.colorbar()
-    plt.ylabel('Tilt angle [deg]')
-    plt.xlabel('Offset from center [mm]')
+    cbar = plt.colorbar()
+    cbar.set_label('Force [N]', rotation=90, fontsize=FONTSIZE)
+    # https://stackoverflow.com/questions/40184696/change-fontsize-of-colorbars-in-matplotlib
+    for t in cbar.ax.get_yticklabels():
+        t.set_fontsize(TICKSIZE)
+
+    plt.ylabel('Tilt angle [deg]', fontsize=FONTSIZE)
+    plt.xlabel('Offset from center [mm]', fontsize=FONTSIZE)
+    plt.xticks(size=TICKSIZE)
+    plt.yticks(size=TICKSIZE)
 
     # -------- Radar Plot ----------
-
     radar = np.zeros((rows, cols))
-    radius = 10
+    radius = 15
     for i in range(rows):
         for j in range(cols):
             accu = 0
             cnt = 0
+
             # For each cell perform a "radar" sum
             for k in range(i-radius, i+radius, 1):
                 if k < 0 or k > (rows - 1):
@@ -252,33 +268,50 @@ def main():
                     accu += means[k, l]
                     cnt += 1
 
-            radar[i,j] = accu / cnt
+            radar[i, j] = accu / cnt
 
-    plt.figure()
+    plt.figure(figsize=FIGURESIZE)
     plt.imshow(radar, cmap='Reds', interpolation='nearest', origin='lower')
-    plt.colorbar()
-    plt.ylabel('Tilt angle [deg]')
-    plt.xlabel('Offset from center [mm]')
-    plt.title('Radar mean-of-values within a radius of ' + str(radius))
 
-    # Show max
+    cbar = plt.colorbar()
+    cbar.set_label('Force [N]', rotation=90, fontsize=FONTSIZE)
+    #https://stackoverflow.com/questions/40184696/change-fontsize-of-colorbars-in-matplotlib
+    for t in cbar.ax.get_yticklabels():
+        t.set_fontsize(TICKSIZE)
+
+    plt.ylabel('Tilt angle [deg]', fontsize=FONTSIZE)
+    plt.xlabel('Offset from center [mm]', fontsize=FONTSIZE)
+    plt.title('Radar mean-of-values within a radius of ' + str(radius), fontsize=FONTSIZE)
+    plt.xticks(size=TICKSIZE)
+    plt.yticks(size=TICKSIZE)
+
+    print(radar)
+    # ------- Display a cross hair (+) at the max point
     for th in range(30):
         threshold = th
-        sub_array = radar[:, threshold:cols]
+        # sub_array = radar[:, threshold:cols-1]
+        sub_array = radar[:, threshold]
         if variable == 'Vacuum_means':
             max_value = sub_array.min()
         elif variable == 'sumForce_means':
             max_value = sub_array.max()
 
         index = np.where(radar == max_value)
-        print(round(max_value,0), index)
 
-        plt.text(index[1], index[0], '*', color='yellow')
+        # In some cases the max value is encountered at more than one place.
+        # In that case just pick the first one
+        a = index[0]
+        b = index[1]
+        if len(a) > 1:
+            index = a
+
+        print(round(max_value, 2), index)
+
+        plt.text(index[1], index[0], '+', color='yellow', fontsize=FONTSIZE)
+        plt.xticks(size=TICKSIZE)
+        plt.yticks(size=TICKSIZE)
 
     plt.show()
-
-
-
 
 
 if __name__ == '__main__':

@@ -206,7 +206,7 @@ def z_noise_experiment(suction_experiment):
 def x_noise_experiment(suction_experiment):
 
     steps = 10
-    reps_at_each_step = 4
+    reps_at_each_step = 1
     noise_res = 1.4 * (suction_experiment.SPHERE_RADIUS - suction_experiment.SUCTION_CUP_RADIUS) / steps
 
     # Step 2: Add noise
@@ -320,10 +320,10 @@ def simple_cup_experiment(suction_experiment):
         # noise_for_filename = round(suction_experiment.noise_z_command * 1000, 2)
         
         # --- Start Recording Rosbag file
-        location = os.path.dirname(os.getcwd())
-        foldername = "/data/"
-        location = '/media/alejo/DATA/data'
-        foldername = '/DATASET5/'
+        # location = os.path.dirname(os.getcwd())
+        # foldername = "/data/"
+        location = '/media/alejo/DATA/data/'
+        foldername = ''
 
         name = suction_experiment.experiment_type \
                 + "_#" + str(step) \

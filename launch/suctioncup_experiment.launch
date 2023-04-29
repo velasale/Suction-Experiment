@@ -13,8 +13,8 @@
   </include>
   
 
-  <!-- Launch Camera
-  <include file="$(find video_stream_opencv)/launch/camera.launch">
+  <!-- Launch Camera -->
+  <!-- <include file="$(find video_stream_opencv)/launch/camera.launch">
     <arg name="video_stream_provider" value="/dev/video2"/>
     <arg name="visualize" value="true" />
   </include> -->
@@ -41,7 +41,7 @@
 
   <!-- Launch ROS Serial -->
   <node pkg="rosserial_python" type="serial_node.py" name="rosserial" output="screen">
-    <param name="port" value="/dev/ttyACM0" />
+    <param name="port" value="/dev/ttyACM1" />
     <param name="baud" value="57600" />
    </node>
 

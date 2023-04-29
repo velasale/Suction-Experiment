@@ -177,11 +177,23 @@ def find_file(type, radius, pressure, noise, rep, pitch, surface):
 
 
 def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, pitch, radius, trends='false'):
+
+    FONTSIZE = 16
+    TICKSIZE = 14
+
+    # convert x and z noises from m to mm
+    for i in range(len(x_noises)):
+        x_noises[i] = x_noises[i] * 1000
+
     if type == "horizontal":
         # print("x_noises: ", x_noises)
         # print("y_values: ", mean_values)
-        std_values = 0
-        plt.errorbar(x_noises, mean_values, std_values, label=(str(pressure) + " PSI, " + str(pitch) + 'deg pitch'))
+
+        # Comment next line to remove the std dev lines from the
+        # std_values = 0
+
+        # plt.errorbar(x_noises, mean_values, std_values, label=(str(pressure) + " PSI, " + str(pitch) + '$^\circ$'))
+        plt.errorbar(x_noises, mean_values, std_values, label=(str(pitch) + '$^\circ$'))
 
         # Trendline
         if trends == 'true':
@@ -196,7 +208,7 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, p
         # plt.fill_between(noises_xnoises, list(map(sub, noises_vacuum_means, noises_vacuum_stds)), list(map(add,noises_vacuum_means, noises_vacuum_stds)), alpha=.5)
 
         title = "Cartesian noise in x, for %.2f mm diameter" % (2000*radius)
-        plt.xlabel("x-noise [m]")
+        plt.xlabel("x-noise [mm]", fontsize=FONTSIZE)
 
     elif type == "vertical":
         plt.errorbar(z_noises, mean_values, std_values, label=(str(pressure) + " PSI"))
@@ -209,19 +221,24 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, p
             plt.annotate("r-squared = {:.3f}".format(r2_score(mean_values, p(z_noises))),(0.01, -200))
 
         title = "Cartesian noise in z, for %.2f mm diameter" % (2000*radius)
-        plt.xlabel("z-noise [m]")
+        plt.xlabel("z-noise [m]", fontsize=FONTSIZE)
 
-    # plt.ylabel("Vacuum [hPa]")
-    # plt.ylim([0, 1100])
+    plt.ylabel("Vacuum [hPa]", fontsize=FONTSIZE)
+    plt.ylim([0, 1100])
     # plt.ylim([-1000, 0])
 
-    plt.ylabel("Force z [N]")
-    plt.ylim([-1, 7])
+    # plt.ylabel("Force z [N]", fontsize=FONTSIZE)
+    # plt.ylim([0, 6])
 
     # plt.ylabel("Torque [Nm]")
     # plt.ylim([0, 0.5])
-    plt.xlim([0, 0.045])
-    plt.legend()
+
+    plt.xlim([0, 45])
+
+    plt.xticks(size=TICKSIZE, fontsize=FONTSIZE)
+    plt.yticks(size=TICKSIZE, fontsize=FONTSIZE)
+
+    plt.legend(fontsize=FONTSIZE)
     # plt.grid()
     plt.title(title)
 
@@ -783,6 +800,12 @@ class Experiment:
     def plot_only_pressure(self):
         """Plots wrench (forces and moments) and pressure readings"""
 
+        FONTSIZE = 16
+        TICKSIZE = 14
+        FIGURESIZE = (8, 6)
+
+        plt.figure(figsize=FIGURESIZE)
+
         pressure_time = self.pressure_elapsed_time
         pressure_values = self.pressure_values
 
@@ -792,10 +815,10 @@ class Experiment:
         plt.plot(pressure_time, pressure_values)
 
         for event, label in zip(event_x, event_y):
-            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=1)
-            plt.text(event, 600, label, rotation=90, color='black')
-            plt.xlabel("Elapsed Time [sec]")
-            plt.ylabel("Pressure [hPa]")
+            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
+            plt.text(event, 600, label, rotation=90, color='black', fontsize=FONTSIZE)
+            plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
+            plt.ylabel("Pressure [hPa]", fontsize=FONTSIZE)
             plt.ylim([0, 1100])
 
         # --- Add error in the title if there was any ---
@@ -814,6 +837,8 @@ class Experiment:
                      ", Repetition No: " + str(self.repetition)
 
         plt.grid()
+        plt.xticks(size=TICKSIZE)
+        plt.yticks(size=TICKSIZE)
         plt.title(self.filename + "\n" + error_type, fontsize=8)
         plt.suptitle(title_text)
 
@@ -1037,7 +1062,8 @@ def noise_experiments(exp_type="vertical"):
 
 def noise_experiments_pitch(exp_type="vertical"):
 
-    plt.figure()
+    FIGURESIZE = (8, 6)
+    plt.figure(figsize=FIGURESIZE)
 
     # --- Controlled variables ---
     radius = 0.0425
@@ -1114,8 +1140,8 @@ def noise_experiments_pitch(exp_type="vertical"):
                 experiment.get_features()
                 # plt.close('all')
                 # experiment.plots_stuff()
-                # experiment.plot_only_pressure()
-                # plt.show()
+                experiment.plot_only_pressure()
+                plt.show()
 
                 # 6. Check if there were any errors during the experiment and
                 # gather features from all the repetitions of the experiment
@@ -1177,12 +1203,12 @@ def noise_experiments_pitch(exp_type="vertical"):
             noises_sumforce_stds.append(round(final_sumforce_std, 2))
 
         # --- Once all values are collected for all noises, print and plot
-        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
-        #               noises_vacuum_stds, pressure, pitch, radius, 'false')
+        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
+                      noises_vacuum_stds, pressure, pitch, radius, 'false')
         # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
         #               noises_zforce_stds, pressure, pitch, radius, 'false')
-        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_sumforce_means,
-                      noises_sumforce_stds, pressure, pitch, radius, 'false')
+        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_sumforce_means,
+        #               noises_sumforce_stds, pressure, pitch, radius, 'false')
 
         print('\nFeed In Pressure: ', pressure)
         print('Vacuum means: ', noises_vacuum_means)
