@@ -95,7 +95,7 @@ def main():
 
     # For a single file
     input_folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
-    file = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1.bag'
+    file = 'horizontal_#2_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_7.56_pitch_15.0_rep_1.bag'
 
     only_filename = file.split(".bag")[0]
     output_dir = input_folder + only_filename + "/pngs/"

@@ -115,9 +115,9 @@ def main():
     # variable = 'Vacuum_means'
     variable = 'sumForce_means'
 
-    FONTSIZE = 16
-    TICKSIZE = 14
-    FIGURESIZE = (6, 5)
+    FONTSIZE = 24
+    TICKSIZE = 22
+    FIGURESIZE = (7, 6.75)    # width, height
 
     results = []
     diameters = [75, 85]
@@ -188,7 +188,7 @@ def main():
         new = np.transpose(map_forces)
         if variable == 'sumForce_means':
             plt.imshow(new, cmap='Reds', interpolation='nearest', origin='lower')
-            plt.title('mean zForce [N] heatmap for Diameter' + str(diameter) + 'mm')
+            # plt.title('mean zForce [N] heatmap for Diameter' + str(diameter) + 'mm')
         elif variable == 'Vacuum_means':
             plt.imshow(new, cmap='Blues', interpolation='nearest', origin='lower')
             plt.title('mean Vacuum [hPa] heatmap for Diameter' + str(diameter) + 'mm')
@@ -226,7 +226,7 @@ def main():
     if variable == 'sumForce_means':
         plt.imshow(means, cmap='Reds', interpolation='nearest', origin='lower')
 
-        plt.title('mean zForce [N] heatmap', fontsize=FONTSIZE)
+        # plt.title('mean zForce [N] heatmap', fontsize=FONTSIZE)
     elif variable == 'Vacuum_means':
         plt.imshow(means, cmap='Blues', interpolation='nearest', origin='lower')
         plt.title('mean Vacuum [hPa] heatmap', fontsize=FONTSIZE)
@@ -281,7 +281,7 @@ def main():
 
     plt.ylabel('Tilt angle [deg]', fontsize=FONTSIZE)
     plt.xlabel('Offset from center [mm]', fontsize=FONTSIZE)
-    plt.title('Radar mean-of-values within a radius of ' + str(radius), fontsize=FONTSIZE)
+    # plt.title('Radar mean-of-values within a radius of ' + str(radius), fontsize=FONTSIZE)
     plt.xticks(size=TICKSIZE)
     plt.yticks(size=TICKSIZE)
 

@@ -94,6 +94,10 @@ def read_csvs(experiment, folder):
             if file == "gripper-pressure.csv":
                 experiment.pressure_time_stamp = data_list.iloc[:, 0].tolist()
                 experiment.pressure_values = data_list.iloc[:, 1].tolist()
+                # Convert to kPa
+                experiment.pressure_values = np.divide(experiment.pressure_values, 10)
+
+
 
             if file == "rench.csv":
                 experiment.wrench_time_stamp = data_list.iloc[:, 0].tolist()
@@ -178,8 +182,8 @@ def find_file(type, radius, pressure, noise, rep, pitch, surface):
 
 def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, pitch, radius, trends='false'):
 
-    FONTSIZE = 16
-    TICKSIZE = 14
+    FONTSIZE = 24
+    TICKSIZE = 24
 
     # convert x and z noises from m to mm
     for i in range(len(x_noises)):
@@ -223,24 +227,25 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, p
         title = "Cartesian noise in z, for %.2f mm diameter" % (2000*radius)
         plt.xlabel("z-noise [m]", fontsize=FONTSIZE)
 
-    plt.ylabel("Vacuum [hPa]", fontsize=FONTSIZE)
-    plt.ylim([0, 1100])
+    plt.ylabel("Vacuum [kPa]", fontsize=FONTSIZE)
+    plt.ylim([0, 110])
     # plt.ylim([-1000, 0])
 
     # plt.ylabel("Force z [N]", fontsize=FONTSIZE)
-    # plt.ylim([0, 6])
+    # plt.ylim([0, 6.5])
 
     # plt.ylabel("Torque [Nm]")
     # plt.ylim([0, 0.5])
 
-    plt.xlim([0, 45])
+    plt.xlim([0, 35])
+    # plt.xlim([0, 45])
 
     plt.xticks(size=TICKSIZE, fontsize=FONTSIZE)
     plt.yticks(size=TICKSIZE, fontsize=FONTSIZE)
 
     plt.legend(fontsize=FONTSIZE)
     # plt.grid()
-    plt.title(title)
+    # plt.title(title)
 
 
 def circle_plots(x_noises, z_noises, radius, x_forces, z_forces, pressure):
@@ -586,8 +591,8 @@ class Experiment:
         # 1.1. When arm didnt retrieve, force and vacuum remain constant before and after retrieve event. Hence you dont
         # see much change in the zforce
         force_range = 1
-        p_threshold = 800
-        p_range = 50
+        p_threshold = 80
+        p_range = 5
         retrieve_index = self.event_values.index("Retrieve")
         time_at_index = self.event_elapsed_time[retrieve_index]
         for time, value in zip(self.wrench_elapsed_time, self.wrench_zforce_relative_values):
@@ -618,10 +623,10 @@ class Experiment:
             print("Error ", force_at_retrieve, force_at_vacuum_off)
             self.errors.append("Arm didn't move after Retrieve")
 
-        if self.exp_type == "vertical" and self.z_noise < 0.01 and pressure_at_retrieve > 900:
+        if self.exp_type == "vertical" and self.z_noise < 0.01 and pressure_at_retrieve > 90:
             self.errors.append("Arm didn't move after Retrieve")
 
-        if self.exp_type == "horizontal" and self.x_noise < 0.02 and pressure_at_retrieve > 900:
+        if self.exp_type == "horizontal" and self.x_noise < 0.02 and pressure_at_retrieve > 90:
             self.errors.append("Arm didn't move after Retrieve")
 
         # 1.2.When for some reason, one topic stopped from being recorded. Hence, the total elapsed time is different
@@ -639,7 +644,7 @@ class Experiment:
 
         # 2. Cases due to the suction cup:
         # 2.1. When suction cup collapses. This shows an increase in vacuum after retrieving
-        pressure_range = 50
+        pressure_range = 5
         retrieve_index = self.event_values.index("Retrieve")
         time_at_index = self.event_elapsed_time[retrieve_index]
         for time, value in zip(self.pressure_elapsed_time, self.pressure_values):
@@ -800,9 +805,9 @@ class Experiment:
     def plot_only_pressure(self):
         """Plots wrench (forces and moments) and pressure readings"""
 
-        FONTSIZE = 16
-        TICKSIZE = 14
-        FIGURESIZE = (8, 6)
+        FONTSIZE = 24
+        TICKSIZE = 22
+        FIGURESIZE = (8.7, 6.8)
 
         plt.figure(figsize=FIGURESIZE)
 
@@ -816,10 +821,59 @@ class Experiment:
 
         for event, label in zip(event_x, event_y):
             plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
-            plt.text(event, 600, label, rotation=90, color='black', fontsize=FONTSIZE)
+            plt.text(event, 50, label, rotation=90, color='black', fontsize=FONTSIZE)
             plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
-            plt.ylabel("Pressure [hPa]", fontsize=FONTSIZE)
-            plt.ylim([0, 1100])
+            plt.ylabel("Pressure [kPa]", fontsize=FONTSIZE)
+            plt.ylim([0, 110])
+
+        # --- Add error in the title if there was any ---
+        try:
+            error_type = self.errors[0]
+        except IndexError:
+            error_type = "data looks good"
+        plt.suptitle(self.filename + "\n\n" + error_type)
+        print(self.filename)
+
+        title_text = "Experiment Type: " + str(self.exp_type) + \
+                     ", F.P.: " + str(self.pressure) + "PSI" \
+                     ", Diameter: " + str(self.surface_radius * 2000) + "mm" \
+                     "\n,Pitch: " + str(int(round(math.degrees(self.pitch), 0))) + "deg" \
+                     ", xNoise Command: " + str(round(self.x_noise_command * 1000, 2)) + "mm" \
+                     ", Repetition No: " + str(self.repetition)
+
+        plt.grid()
+        plt.xticks(size=TICKSIZE)
+        plt.yticks(size=TICKSIZE)
+        plt.title(self.filename + "\n" + error_type, fontsize=8)
+        plt.suptitle(title_text)
+
+
+    def plot_only_total_force(self):
+        """Plots wrench (forces and moments) and pressure readings"""
+
+        FONTSIZE = 24
+        TICKSIZE = 22
+        FIGURESIZE = (8.7, 6.8)
+
+        plt.figure(figsize=FIGURESIZE)
+
+        force_time = self.wrench_elapsed_time
+        sumforce_values = self.wrench_sumforce_relative_values
+
+        event_x = self.event_elapsed_time
+        event_y = self.event_values
+
+        max_sumforce_val = self.max_detach_sumforce
+        max_sumforce_time = self.max_detach_sumforce_time
+
+        plt.plot(force_time, sumforce_values, linewidth=2, color='red')
+
+        for event, label in zip(event_x, event_y):
+            plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
+            plt.text(event, 2, label, rotation=90, color='black', fontsize=FONTSIZE)
+            plt.xlabel("Elapsed Time [sec]", fontsize=FONTSIZE)
+            plt.ylabel("Force [N]", fontsize=FONTSIZE)
+            plt.ylim([0, 6.5])
 
         # --- Add error in the title if there was any ---
         try:
@@ -1062,12 +1116,12 @@ def noise_experiments(exp_type="vertical"):
 
 def noise_experiments_pitch(exp_type="vertical"):
 
-    FIGURESIZE = (8, 6)
+    FIGURESIZE = (9, 7.2)
     plt.figure(figsize=FIGURESIZE)
 
     # --- Controlled variables ---
-    radius = 0.0425
-    # radius = 0.0375
+    # radius = 0.0425
+    radius = 0.0375
 
     # The pitch was varied only @60PSI
     pressure = 60
@@ -1139,9 +1193,12 @@ def noise_experiments_pitch(exp_type="vertical"):
                 # 5. Get different properties for each experiment
                 experiment.get_features()
                 # plt.close('all')
-                # experiment.plots_stuff()
-                experiment.plot_only_pressure()
-                plt.show()
+
+                if only_filename == 'horizontal_#2_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_7.56_pitch_15.0_rep_7':
+                    # experiment.plots_stuff()
+                    experiment.plot_only_total_force()
+                    # experiment.plot_only_pressure()
+                    plt.show()
 
                 # 6. Check if there were any errors during the experiment and
                 # gather features from all the repetitions of the experiment
@@ -1150,14 +1207,15 @@ def noise_experiments_pitch(exp_type="vertical"):
                     errors += 1
                     print(errors)
                     continue
-                    # reps_xnoises.append(experiment.x_noise_command)
-                    # reps_znoises.append(experiment.z_noise_command)
-                    # reps_vacuum_means.append(experiment.atmospheric_pressure)
-                    # reps_vacuum_stds.append('Nan')
-                    # reps_zforce_max.append('Nan')
-                    # reps_xforce_max.append('Nan')
-                    # reps_ytorque_max.append('Nan')
-                    # reps_sumforce_max.append('Nan')
+                    # Uncomment following lines if you want to make
+                    reps_xnoises.append(experiment.x_noise_command)
+                    reps_znoises.append(experiment.z_noise_command)
+                    reps_vacuum_means.append(experiment.atmospheric_pressure)
+                    reps_vacuum_stds.append('Nan')
+                    reps_zforce_max.append('Nan')
+                    reps_xforce_max.append('Nan')
+                    reps_ytorque_max.append('Nan')
+                    reps_sumforce_max.append('Nan')
 
                 else:
                     reps_xnoises.append(experiment.x_noise)
