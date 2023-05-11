@@ -67,15 +67,20 @@ ros::ServiceServer<std_srvs::Trigger::Request,
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 
-std_msgs::Float32 press_msg[NUM_SCUPS];
+std_msgs::Float32 press_msg;
+ros::Publisher publisher_pressure("/gripper/pressure", &press_msg);
 
-ros::Publisher publisher_pressure[NUM_SCUPS]{
-  ros::Publisher("/gripper/pressure/sc1", &press_msg[0]),
-  ros::Publisher("/gripper/pressure/sc1", &press_msg[1]),
-  ros::Publisher("/gripper/pressure/sc1", &press_msg[2])
-};
+//std_msgs::Float32 press_msg[NUM_SCUPS];
 
-std_msgs::String messages_msg
+//ros::Publisher publisher_pressure[NUM_SCUPS]{
+//  ros::Publisher("/gripper/pressure/sc1", &press_msg[0]),
+//  ros::Publisher("/gripper/pressure/sc1", &press_msg[1]),
+//  ros::Publisher("/gripper/pressure/sc1", &press_msg[2])
+//};
+
+
+
+std_msgs::String messages_msg;
 ros::Publisher publisher_messages("/gripper/messages", &messages_msg);
 
 
@@ -92,15 +97,23 @@ long publisher_timer;
 
 /********************************* Setup ********************************/
 void setup() {
-  // Initialize serial:
-  Serial.begin(115200);
   
+  // Initialize serial
+  Serial.begin(57600);
+  
+  while(! Serial){
+    ; //Wait for serial to connect
+  }
+  
+  
+  Serial.println("aaaaaaaaaaaaaaaaa");
   // Initialize VALVE pin as output
   pinMode(VALVE, OUTPUT);
 
   // Initialize pressure sensor
-  //Wire.begin();
-  mpr.begin();
+  //  Wire.begin();
+  //mpr.begin();
+  
 
   // Initialize ROS stuff
   if (USE_ROSSERIAL){
@@ -109,7 +122,7 @@ void setup() {
     
     // Advertise Publishers  
     for (int s=0; s < NUM_SCUPS; s++){
-      nh.advertise(publisher_pressure[s]);
+//      nh.advertise(publisher_pressure[s]);
     }    
 
     // Advertise Services
@@ -118,9 +131,10 @@ void setup() {
     
   } else {
     // Communicate through Serial instead
-    Serial.println("Starting Suction Gripper on Serial...")
+    Serial.println("Starting Suction Gripper on Serial...");
   }    
-
+ 
+  
   // Initialize hardware outputs in their default state
   digitalWrite(VALVE, LOW);   
  
@@ -130,66 +144,50 @@ void setup() {
 
 /**************************** Loop **************************************/
 void loop() {
+
+
   
   // Check for service calls
   if(USE_ROSSERIAL){
     nh.spinOnce();
   } else {
-    //do nothing
-  }
-  
+    Serial.println("aahhhh");
+  }  
 
   // Get data
-  for (int i = = 0; i<3; i++){
+  for (int i = 0; i<3; i++){
     pcaselect(i);
     float pressure_hPa = mpr.readPressure();
+    Serial.print(pressure_hPa);
     
-    pres_msg[i].data = pressure_hPa;
+//    press_msg[i].data = pressure_hPa;
+    press_msg.data = pressure_hPa;
     
   }
 
-  TODO Parallel
-  TODO Switch to integers instead of Floats
+//  TODO Parallel
+//  TODO Switch to integers instead of Floats
 
 
   // Send data
   if (USE_ROSSERIAL){
     nh.spinOnce();
   
-    for (int i = = 0; i<3; i++){      
-      publisher_pressure[i] = pres_msg[i].data      
+    for (int i = 0; i < 3; i++){      
+//      publisher_pressure[i].publish(&press_msg[i]);     
     }
     
   } else {
-    for (int i = = 0; i<3; i++){      
-      Serial.print(pres_msg[i].data);    
-      Serial.print(" "
-    }
-    Serial.println("")    
+      for (int i = 0; i < 3; i++){      
+//        Serial.print(press_msg[i].data);    
+        Serial.print(press_msg.data);  
+        
+        Serial.print(" ");
+      }
+    Serial.println("");
   }
 
-  
-
-  if (millis() > publisher_timer){
-
-    for (int i = 0; i <3; i++){      
-
-      // 0 = Suction A,  1 = Suction B, 2 = Suction C
-      pcaselect(i);
-      
-      float pressure_hPa = mpr.readPressure();
-      delay(10);
-      
-      press_msg.data = pressure_hPa;
-
-      
-      publisher_pressure.publish(&press_msg);      
-     
-      publisher_timer = millis() + 10;    
-  
-      
-    }
-  }
+//  TODO How to time it better?  
   
 }
 

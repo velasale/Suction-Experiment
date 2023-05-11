@@ -817,7 +817,7 @@ class Experiment:
         event_x = self.event_elapsed_time
         event_y = self.event_values
 
-        plt.plot(pressure_time, pressure_values)
+        plt.plot(pressure_time, pressure_values, linewidth=2)
 
         for event, label in zip(event_x, event_y):
             plt.axvline(x=event, color='black', linestyle='dotted', linewidth=2)
@@ -1196,8 +1196,8 @@ def noise_experiments_pitch(exp_type="vertical"):
 
                 if only_filename == 'horizontal_#2_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_7.56_pitch_15.0_rep_7':
                     # experiment.plots_stuff()
-                    experiment.plot_only_total_force()
-                    # experiment.plot_only_pressure()
+                    # experiment.plot_only_total_force()
+                    experiment.plot_only_pressure()
                     plt.show()
 
                 # 6. Check if there were any errors during the experiment and

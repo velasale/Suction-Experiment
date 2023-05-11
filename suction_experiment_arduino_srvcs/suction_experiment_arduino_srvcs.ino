@@ -110,6 +110,8 @@ void loop() {
     publisher_pressure.publish(&press_msg);      
    
     publisher_timer = millis() + 10;    
+
+    Serial.println(pressure_hPa);
   }
   
   nh.spinOnce();  
