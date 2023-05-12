@@ -19,6 +19,7 @@
  *
  */
 
+const bool  USE_ROSSERIAL = false;
 const uint8_t NUM_CUPS = 3;          /*Number of suction cups*/
 
 #include <Wire.h>
@@ -64,11 +65,12 @@ ros::ServiceServer<std_srvs::Trigger::Request,
 
 /*************************** ROS Publishers Setup **************************/
 #include <std_msgs/Float32.h>
+#include <std_msgs/UInt16.h>
 
 //std_msgs::Float32 press_msg;
 //ros::Publisher publisher_pressure("/gripper/pressure", &press_msg);
 
-std_msgs::Float32 press_msg[NUM_CUPS];
+std_msgs::UInt16 press_msg[NUM_CUPS];
 ros::Publisher publisher_pressure[NUM_CUPS]{
   ros::Publisher("/gripper/pressure/sc1", &press_msg[0]),
   ros::Publisher("/gripper/pressure/sc2", &press_msg[1]),
@@ -84,13 +86,14 @@ const int PCAADR = 0x70;
 const int VALVE_DELAY = 10;
 
 // Variables
-long publisher_timer;
+long publisher_timer = 10;
+uint16_t pressure_hPa;
 
 
 /**************************** Setup ***************************************/
 void setup() {
   // initialize serial:
-  Serial.begin(57600);
+  Serial.begin(57600);     // 57600, 76800, 115200
   
   // Initialize VALVE pin as output
   pinMode(VALVE, OUTPUT);
@@ -99,17 +102,22 @@ void setup() {
   //Wire.begin();
   mpr.begin();
 
-  // ROS stuff
-  nh.initNode();
-  for (int i=0; i < NUM_CUPS; i++){
-    nh.advertise(publisher_pressure[i]);
+  // Initialize ROS stuff
+  if (USE_ROSSERIAL){
+    
+    // Initialize ROS node
+    nh.initNode();
+
+    // Initialize ROS publishers
+    for (uint8_t i =0 ; i < NUM_CUPS; i++){
+      nh.advertise(publisher_pressure[i]);
+    }
+  
+    // ROS services
+    nh.advertiseService(service_open);
+    nh.advertiseService(service_close);    
   }
   
-
-  // ROS services
-  nh.advertiseService(service_open);
-  nh.advertiseService(service_close);
-
   digitalWrite(VALVE, LOW); 
   
 }
@@ -118,32 +126,42 @@ void setup() {
 /***************************** Loop ****************************************/
 void loop() {
 
+  if (USE_ROSSERIAL){
+    nh.spinOnce();   
+  }
+
+  
   //  TODO Parallel
-  //  TODO Switch to integers instead of Floats
   //  TODO add the IF ROSSERIAL
+  //  TODO try different serial speeds
 
   if (millis() > publisher_timer){
 
-    for (int i = 0; i < 3; i++){
+    for (uint8_t i = 0; i < NUM_CUPS; i++){
       
       pcaselect(i);
-      
-      float pressure_hPa = mpr.readPressure();
-      delay(10);
-      
+      pressure_hPa = mpr.readPressure();      
       press_msg[i].data = pressure_hPa;
-      publisher_pressure[i].publish(&press_msg[i]);    
+
+      if (USE_ROSSERIAL){        
+        publisher_pressure[i].publish(&press_msg[i]);            
+      }
+      else {
+        Serial.print(press_msg[i].data);        
+        Serial.print(" ");
+      }      
       
-      Serial.print(pressure_hPa);
-      Serial.print(" ");
-    }      
-    Serial.println("\n");
-   
-    publisher_timer = millis() + 100;    
+    }  
+
+    if (!USE_ROSSERIAL){
+//      Serial.println(press_msg[0].data);    
+      Serial.println("\n");
+    }
+       
+    publisher_timer = millis() + 0.1;    
     
-  }
+  } 
   
-  nh.spinOnce();  
 }
 
 /****************************** Control Functions ***************************/
