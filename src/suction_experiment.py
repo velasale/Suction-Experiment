@@ -490,7 +490,6 @@ class SuctionExperiment():
         wiper.id = 0
         wiper.action = Marker.DELETEALL
         self.markerTextPublisher.publish(wiper)
-        self.event_publisher = event_publisher
                       
         ## Experiment Parameters
         self.ROBOT_NAME = "ur5e"
