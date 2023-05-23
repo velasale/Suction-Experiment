@@ -180,7 +180,7 @@ def find_file(type, radius, pressure, noise, rep, pitch, surface):
     return file, only_filename
 
 
-def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, pitch, radius, trends='false'):
+def suction_plots(var, type, x_noises, z_noises, mean_values, std_values, pressure, pitch, radius, trends='false'):
 
     FONTSIZE = 24
     TICKSIZE = 24
@@ -227,18 +227,19 @@ def suction_plots(type, x_noises, z_noises, mean_values, std_values, pressure, p
         title = "Cartesian noise in z, for %.2f mm diameter" % (2000*radius)
         plt.xlabel("z-noise [m]", fontsize=FONTSIZE)
 
-    plt.ylabel("Vacuum [kPa]", fontsize=FONTSIZE)
-    plt.ylim([0, 110])
-    # plt.ylim([-1000, 0])
+    if var == 'pressure':
+        plt.ylabel("Vacuum [kPa]", fontsize=FONTSIZE)
+        plt.ylim([0, 110])
+        # plt.ylim([-1000, 0])
+    elif var == 'force' or var == 'zforce':
+        plt.ylabel("Force z [N]", fontsize=FONTSIZE)
+        plt.ylim([0, 6.5])
+    elif var =='torque':
+        plt.ylabel("Torque [Nm]")
+        plt.ylim([0, 0.5])
 
-    # plt.ylabel("Force z [N]", fontsize=FONTSIZE)
-    # plt.ylim([0, 6.5])
-
-    # plt.ylabel("Torque [Nm]")
-    # plt.ylim([0, 0.5])
-
-    plt.xlim([0, 35])
-    # plt.xlim([0, 45])
+    # plt.xlim([0, 35])
+    plt.xlim([0, 45])
 
     plt.xticks(size=TICKSIZE, fontsize=FONTSIZE)
     plt.yticks(size=TICKSIZE, fontsize=FONTSIZE)
@@ -1114,14 +1115,15 @@ def noise_experiments(exp_type="vertical"):
     plt.show()
 
 
-def noise_experiments_pitch(exp_type="vertical"):
+def noise_experiments_pitch(exp_type="vertical", radius=75/1000, variable='pressure'):
+    """
 
+    @type radius: float
+    """
     FIGURESIZE = (9, 7.2)
     plt.figure(figsize=FIGURESIZE)
 
     # --- Controlled variables ---
-    # radius = 0.0425
-    radius = 0.0375
 
     # The pitch was varied only @60PSI
     pressure = 60
@@ -1194,11 +1196,12 @@ def noise_experiments_pitch(exp_type="vertical"):
                 experiment.get_features()
                 # plt.close('all')
 
-                if only_filename == 'horizontal_#2_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_7.56_pitch_15.0_rep_7':
+                # if only_filename == 'horizontal_#2_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_7.56_pitch_15.0_rep_7':
                     # experiment.plots_stuff()
                     # experiment.plot_only_total_force()
-                    experiment.plot_only_pressure()
-                    plt.show()
+
+                    # experiment.plot_only_pressure()
+                    # plt.show()
 
                 # 6. Check if there were any errors during the experiment and
                 # gather features from all the repetitions of the experiment
@@ -1261,12 +1264,15 @@ def noise_experiments_pitch(exp_type="vertical"):
             noises_sumforce_stds.append(round(final_sumforce_std, 2))
 
         # --- Once all values are collected for all noises, print and plot
-        suction_plots(exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
-                      noises_vacuum_stds, pressure, pitch, radius, 'false')
-        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
-        #               noises_zforce_stds, pressure, pitch, radius, 'false')
-        # suction_plots(exp_type, noises_xnoises, noises_znoises, noises_sumforce_means,
-        #               noises_sumforce_stds, pressure, pitch, radius, 'false')
+        if variable == 'pressure':
+            suction_plots(variable, exp_type, noises_xnoises, noises_znoises, noises_vacuum_means,
+                          noises_vacuum_stds, pressure, pitch, radius, 'false')
+        elif variable == 'zforce':
+            suction_plots(variable, exp_type, noises_xnoises, noises_znoises, noises_zforce_means,
+                          noises_zforce_stds, pressure, pitch, radius, 'false')
+        elif variable == 'force':
+            suction_plots(variable, exp_type, noises_xnoises, noises_znoises, noises_sumforce_means,
+                          noises_sumforce_stds, pressure, pitch, radius, 'false')
 
         print('\nFeed In Pressure: ', pressure)
         print('Vacuum means: ', noises_vacuum_means)
@@ -1408,13 +1414,18 @@ def plot_and_video():
 
 
 def main():
-
+        
     # TODO Interpret moments (lever = height of the rig)
+    
+    # --- Parameters of the required experiments
+    radius = 85/2000        # in meters! swith between 75mm and 85mm
+    variable = 'pressure'   # switch between force, pressure and zforce
 
+    # --- Uncomment the desired experiment
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
-    noise_experiments_pitch('horizontal')
+    noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
     # plot_and_video()
 
