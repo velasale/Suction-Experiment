@@ -94,9 +94,8 @@ def read_csvs(experiment, folder):
             if file == "gripper-pressure.csv":
                 experiment.pressure_time_stamp = data_list.iloc[:, 0].tolist()
                 experiment.pressure_values = data_list.iloc[:, 1].tolist()
-                # Convert to kPa
+                # Convert to kPa (1000 Pa) which is more standard than hPa (100 Pa)
                 experiment.pressure_values = np.divide(experiment.pressure_values, 10)
-
 
 
             if file == "rench.csv":
@@ -230,7 +229,7 @@ def suction_plots(var, type, x_noises, z_noises, mean_values, std_values, pressu
     if var == 'pressure':
         plt.ylabel("Vacuum [kPa]", fontsize=FONTSIZE)
         plt.ylim([0, 110])
-        # plt.ylim([-1000, 0])
+        # plt.ylim([-100, 0])
     elif var == 'force' or var == 'zforce':
         plt.ylabel("Force z [N]", fontsize=FONTSIZE)
         plt.ylim([0, 6.5])
@@ -506,6 +505,7 @@ class Experiment:
             relative_ztorque = self.wrench_ztorque_values[i] - self.wrench_ztorque_values[0]
             relative_ytorque = self.wrench_ytorque_values[i] - self.wrench_ytorque_values[0]
             relative_xtorque = self.wrench_xtorque_values[i] - self.wrench_xtorque_values[0]
+
             self.wrench_zforce_relative_values.append(relative_zforce)
             self.wrench_yforce_relative_values.append(relative_yforce)
             self.wrench_xforce_relative_values.append(relative_xforce)
@@ -848,7 +848,6 @@ class Experiment:
         plt.title(self.filename + "\n" + error_type, fontsize=8)
         plt.suptitle(title_text)
 
-
     def plot_only_total_force(self):
         """Plots wrench (forces and moments) and pressure readings"""
 
@@ -920,10 +919,10 @@ class Experiment:
         fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(12, 4.8))
         ax[0].plot(pressure_time, pressure_values, 'k-', linewidth=2)
         ax[0].set_xlim(0, max(pressure_time))
-        ax[0].set_ylim(0, 1200)
+        ax[0].set_ylim(0, 120)
         ax[0].grid()
         ax[0].set_xlabel('Elapsed time [sec]')
-        ax[0].set_ylabel('Pressure [hPa]')
+        ax[0].set_ylabel('Pressure [kPa]')
         plt.ion()
         plt.show()
         plt.title(filename, loc='right')
@@ -946,7 +945,7 @@ class Experiment:
             im = OffsetImage(img, zoom=0.55)
             ab = AnnotationBbox(im, (0, 0), xycoords='axes fraction', box_alignment=(0, 0))
             ax[1].add_artist(ab)
-            plt.pause(0.025)
+            plt.pause(0.0001)
 
             # # Save the figure window into an avi file
             # img = pyautogui.screenshot()
@@ -1392,6 +1391,17 @@ def plot_and_video():
     # --- Give File
     location = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
     filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
+    # Sample with 0deg tilt and 0 mm offset:
+    filename = 'horizontal_#0_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_0.0_pitch_0.0_rep_1'
+    # Sample with 0deg tilt and 18.9mm offset:
+    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_0.0_rep_1'
+    # Sample with 15deg tilt and 18.9mm offset
+    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_15.0_rep_3'
+    # Sample with 30deg tilt and 18.9mm offset
+    filename = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_45.0_rep_1'
+    # Sample with 45deg tilt and 26.5mm offsrt
+    # filename = 'horizontal_#7_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_26.46_pitch_45.0_rep_1'
+
 
     # --- Open Bag file
     # bag_to_csvs(location + filename + ".bag")
@@ -1425,9 +1435,9 @@ def main():
     # circle_plots(1,1,1)
     # noise_experiments('horizontal')
     # noise_experiments('vertical')
-    noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
+    # noise_experiments_pitch(exp_type='horizontal', radius=radius, variable=variable)
     # simple_suction_experiment()
-    # plot_and_video()
+    plot_and_video()
 
 
 if __name__ == '__main__':

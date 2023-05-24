@@ -307,7 +307,7 @@ def main():
 
         print(round(max_value, 2), index)
 
-        plt.text(index[1], index[0], '+', color='yellow', fontsize=FONTSIZE)
+        # plt.text(index[1], index[0], '+', color='yellow', fontsize=FONTSIZE)
         plt.xticks(size=TICKSIZE)
         plt.yticks(size=TICKSIZE)
 
