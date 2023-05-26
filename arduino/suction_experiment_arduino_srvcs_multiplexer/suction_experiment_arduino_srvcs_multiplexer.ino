@@ -20,20 +20,21 @@
 */
 
 const bool  USE_ROSSERIAL = true;
-const uint8_t NUM_CUPS = 3;          /*Number of suction cups*/
 
 #include <Wire.h>
 #include <time.h>
 #include "Adafruit_MPRLS.h"
+#include "Adafruit_VL53L0X.h"
 
 //You don't *need* a reset and EOC pin for most usees, so we set to -1 and don't connect
 #define RESET_PIN -1
 #define EOC_PIN   -1
 #define VALVE 13
 Adafruit_MPRLS mpr = Adafruit_MPRLS(RESET_PIN, EOC_PIN);
+Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 
 
-unsigned long currentMillis;
+
 
 
 /*************************** Base ROS Setup ******************************/
@@ -70,28 +71,26 @@ ros::ServiceServer<std_srvs::Trigger::Request,
 /*************************** ROS Publishers Setup **************************/
 #include <std_msgs/Float32.h>
 #include <std_msgs/UInt16.h>
+#include <std_msgs/UInt8.h>
 
-//std_msgs::Float32 press_msg;
-//ros::Publisher publisher_pressure("/gripper/pressure", &press_msg);
 
-std_msgs::UInt16 press_msg[NUM_CUPS];
-ros::Publisher publisher_pressure[NUM_CUPS] {
+std_msgs::UInt16 press_msg[3];
+ros::Publisher publisher_pressure[3] {
   ros::Publisher("/gripper/pressure/sc1", &press_msg[0]),
   ros::Publisher("/gripper/pressure/sc2", &press_msg[1]),
   ros::Publisher("/gripper/pressure/sc3", &press_msg[2])
 };
 
 
+std_msgs::UInt8 dist_msg;
+ros::Publisher publisher_distance("/gripper/distance", &dist_msg);
+
 
 
 // Constants
 const int PCAADR = 0x70;
-//const int sensorAddress = 0x18;
 const int VALVE_DELAY = 10;
 
-// Variables
-long publisher_timer = 10;
-uint16_t pressure_hPa;
 
 
 /**************************** Setup ***************************************/
@@ -101,9 +100,14 @@ void setup() {
 
   // Initialize VALVE pin as output
   pinMode(VALVE, OUTPUT);
+  digitalWrite(VALVE, LOW);
 
   // Initialize pressure sensor
   mpr.begin();
+
+  // Initialize ToF sensor
+  lox.begin();
+  lox.startRangeContinuous();
 
   // Initialize ROS stuff
   if (USE_ROSSERIAL) {
@@ -113,22 +117,27 @@ void setup() {
     nh.initNode();
 
     // Initialize ROS publishers
-    for (uint8_t i = 0 ; i < NUM_CUPS; i++) {
+    for (uint8_t i = 0 ; i < 3; i++) {
       nh.advertise(publisher_pressure[i]);
     }
+    nh.advertise(publisher_distance);
 
     // ROS services
     nh.advertiseService(service_open);
     nh.advertiseService(service_close);
   }
 
-  digitalWrite(VALVE, LOW);
+  
 
 }
 
 
 /***************************** Loop ****************************************/
 void loop() {
+  
+  unsigned long currentMillis;
+  uint16_t pressure_hPa;
+  uint8_t distance;
 
   //  TODO Parallel
 
@@ -136,32 +145,43 @@ void loop() {
     nh.spinOnce();
   }
 
-  for (uint8_t i = 0; i < NUM_CUPS; i++) {
+  Serial.println("\n......I2C Multiplexing.......");
+  
+  for (uint8_t i = 0; i < (3 + 1); i++) {
+    // NUM_CUPS +1 is because the i2c multiplexer reads the three pressure sensors AND the
+    // time of Flight sensor        
 
     currentMillis = millis();
 
     pcaselect(i);
-    pressure_hPa = mpr.readPressure();
-    press_msg[i].data = pressure_hPa;
+    if(i<3){
+      pressure_hPa = mpr.readPressure();
+      press_msg[i].data = pressure_hPa;      
 
-
-    if (USE_ROSSERIAL) {
-      publisher_pressure[i].publish(&press_msg[i]);
+      if (USE_ROSSERIAL) {
+        publisher_pressure[i].publish(&press_msg[i]);
+      }
+      else {
+        //Print the time in ms just to have an idea of long the sensor takes to measure press.
+        Serial.println("[Ch" + String(i) +"] " + "Period: " + String(millis() - currentMillis) + " ms, " + "Pressure: " + String(press_msg[i].data) + " hPa");     
+      }
+      
     }
     else {
-      //Print the time in ms just to have an idea of long the sensor takes to measure press.
-      Serial.print(millis() - currentMillis);
-      Serial.print(" ");
+      dist_msg.data = lox.readRange();
 
-      Serial.print(press_msg[i].data);
-      Serial.print(" ");
-    }
+      if (USE_ROSSERIAL){
+        publisher_distance.publish(&dist_msg);        
+      }
+      else {
+        Serial.println("[Ch" + String(i) +"] " + "Period: " + String(millis() - currentMillis) + " ms, " + "Distance: " + String(dist_msg.data) + " mm");    
+      }      
+    }    
+    
 
   }
 
-  if (!USE_ROSSERIAL) {
-    Serial.println("\n");
-  }
+  
 
 }
 
@@ -186,7 +206,7 @@ bool openValve() {
 /**************************** I2C Multiplexer *********************************/
 // Reference: https://learn.adafruit.com/adafruit-pca9546-4-channel-i2c-multiplexer/arduino
 void pcaselect(uint8_t i) {
-  if (i > 3) return;
+  if (i > 4) return;
 
   Wire.beginTransmission(PCAADR);
   Wire.write(1 << i);
