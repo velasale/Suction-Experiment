@@ -529,14 +529,24 @@ class SuctionExperiment():
         
         # --- Initiate object joint goal
         joint_goal = self.move_group.get_current_joint_values()
+        print('\n',joint_goal)
 
         # --- Preliminary position joint values
-        joint_goal[0] = + 180 * pi / 180
-        joint_goal[1] = - 65 * pi / 180
-        joint_goal[2] = - 100 * pi / 180
-        joint_goal[3] = - 90 * pi / 180
-        joint_goal[4] = + 90 * pi / 180
-        joint_goal[5] = +  0 * pi / 180
+        # joint_goal[0] = + 180 * pi / 180
+        # joint_goal[1] = - 65 * pi / 180
+        # joint_goal[2] = - 100 * pi / 180
+        # joint_goal[3] = - 90 * pi / 180
+        # joint_goal[4] = + 90 * pi / 180
+        # joint_goal[5] = +  0 * pi / 180
+
+        joint_goal[0] = - 0.5
+        joint_goal[1] = - 1.6
+        joint_goal[2] = - 1.0
+        joint_goal[3] = - 1.0
+        joint_goal[4] = - 1.6
+        joint_goal[5] = 0.0
+
+        print('\n',joint_goal)
 
         # --- Move to the joint goal
         self.move_group.go(joint_goal, wait=True)
@@ -859,7 +869,7 @@ def main():
 
     # Step 1: Place robot at preliminary position
     suction_experiment = SuctionExperiment()
-    #suction_experiment.go_preliminary_position()
+    suction_experiment.go_preliminary_position()
 
     # Step 2: Get inputs from user
     print("\n\n ***** Suction Cups Experiments *****")
