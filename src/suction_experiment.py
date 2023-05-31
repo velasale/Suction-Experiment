@@ -532,19 +532,13 @@ class SuctionExperiment():
         print('\n',joint_goal)
 
         # --- Preliminary position joint values
-        # joint_goal[0] = + 180 * pi / 180
-        # joint_goal[1] = - 65 * pi / 180
-        # joint_goal[2] = - 100 * pi / 180
-        # joint_goal[3] = - 90 * pi / 180
-        # joint_goal[4] = + 90 * pi / 180
-        # joint_goal[5] = +  0 * pi / 180
+        joint_goal[0] = + 180 * pi / 180
+        joint_goal[1] = - 65 * pi / 180
+        joint_goal[2] = - 100 * pi / 180
+        joint_goal[3] = - 90 * pi / 180
+        joint_goal[4] = + 90 * pi / 180
+        joint_goal[5] = +  0 * pi / 180
 
-        joint_goal[0] = - 0.5
-        joint_goal[1] = - 1.6
-        joint_goal[2] = - 1.0
-        joint_goal[3] = - 1.0
-        joint_goal[4] = - 1.6
-        joint_goal[5] = 0.0
 
         print('\n',joint_goal)
 
