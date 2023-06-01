@@ -19,6 +19,9 @@
 
 */
 
+#define Serial SerialUSB    //This trick is meant for the Aduino Zero board
+
+
 const bool  USE_ROSSERIAL = true;
 
 #include <Wire.h>
@@ -96,8 +99,10 @@ const int VALVE_DELAY = 10;
 /**************************** Setup ***************************************/
 void setup() {
   // initialize serial:
-  Serial.begin(115200);     // 57600, 76800, 115200
-
+  if (!USE_ROSSERIAL){ 
+    Serial.begin(115200);     // 57600, 76800, 115200    
+  }
+  
   // Initialize VALVE pin as output
   pinMode(VALVE, OUTPUT);
   digitalWrite(VALVE, LOW);
@@ -113,7 +118,7 @@ void setup() {
   if (USE_ROSSERIAL) {
 
     // Initialize ROS node
-    nh.getHardware()->setBaud(57600);     //Needs to match the one set in the PC's launch file
+//    nh.getHardware()->setBaud(250000);     //Needs to match the one set in the PC's launch file
     nh.initNode();
 
     // Initialize ROS publishers
@@ -144,8 +149,9 @@ void loop() {
   if (USE_ROSSERIAL) {
     nh.spinOnce();
   }
-
-  Serial.println("\n......I2C Multiplexing.......");
+  else{
+    Serial.println("\n......I2C Multiplexing.......");
+  } 
   
   for (uint8_t i = 0; i < (3 + 1); i++) {
     // NUM_CUPS +1 is because the i2c multiplexer reads the three pressure sensors AND the
