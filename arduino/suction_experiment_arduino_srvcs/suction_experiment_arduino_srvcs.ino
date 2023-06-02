@@ -19,6 +19,8 @@
  *
  */
 
+#define Serial SerialUSB    //This trick is meant for the Aduino Zero board
+
 
 #include <Wire.h>
 #include "Adafruit_MPRLS.h"

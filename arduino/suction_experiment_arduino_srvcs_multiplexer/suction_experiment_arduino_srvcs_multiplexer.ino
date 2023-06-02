@@ -100,12 +100,15 @@ const int VALVE_DELAY = 10;
 void setup() {
   // initialize serial:
   if (!USE_ROSSERIAL){ 
-    Serial.begin(115200);     // 57600, 76800, 115200    
+    Serial.begin(57600);     // 57600, 76800, 115200    
   }
   
   // Initialize VALVE pin as output
+  delay(10);
   pinMode(VALVE, OUTPUT);
+  delay(10);
   digitalWrite(VALVE, LOW);
+  delay(10);
 
   // Initialize pressure sensor
   mpr.begin();
