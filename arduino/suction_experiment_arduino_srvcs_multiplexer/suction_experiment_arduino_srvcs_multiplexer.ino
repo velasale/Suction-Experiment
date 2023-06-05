@@ -85,7 +85,7 @@ ros::Publisher publisher_pressure[3] {
 };
 
 
-std_msgs::UInt8 dist_msg;
+std_msgs::UInt16 dist_msg;
 ros::Publisher publisher_distance("/gripper/distance", &dist_msg);
 
 
@@ -115,7 +115,7 @@ void setup() {
 
   // Initialize ToF sensor
   lox.begin();
-  lox.startRangeContinuous();
+  lox.startRangeContinuous(10);
 
   // Initialize ROS stuff
   if (USE_ROSSERIAL) {
@@ -144,6 +144,7 @@ void setup() {
 void loop() {
   
   unsigned long currentMillis;
+  VL53L0X_RangingMeasurementData_t measure;
   uint16_t pressure_hPa;
   uint8_t distance;
 
@@ -163,6 +164,8 @@ void loop() {
     currentMillis = millis();
 
     pcaselect(i);
+    
+    // Measure Pressure in the first three (3) channels 
     if(i<3){
       pressure_hPa = mpr.readPressure();
       press_msg[i].data = pressure_hPa;      
@@ -176,8 +179,18 @@ void loop() {
       }
       
     }
+
+    // ... and then measure Distance in the fourth channel
     else {
-      dist_msg.data = lox.readRange();
+//      dist_msg.data = lox.readRange();
+      
+      lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
+
+      if (measure.RangeStatus != 4) {  // phase failures have incorrect data
+        dist_msg.data = measure.RangeMilliMeter;        
+      } else {
+        dist_msg.data = 1e4;
+      }
 
       if (USE_ROSSERIAL){
         publisher_distance.publish(&dist_msg);        
