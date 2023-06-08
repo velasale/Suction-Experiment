@@ -281,7 +281,7 @@ def x_noise_experiment(suction_experiment):
             print("Retrieving from surface")
             suction_experiment.publish_event("Retrieve")
             move4 = suction_experiment.move_in_z( - suction_experiment.OFFSET - suction_experiment.SUCTION_CUP_SPEC * 1.5) # a bit more to avoid hitting when going to starting point
-            print("Move 4:",move4)
+            print("Move 4:", move4)
             # time.sleep(0.1)
 
             # --- Stop vacuum
