@@ -155,7 +155,7 @@ def z_noise_experiment(suction_experiment):
             # --- Add noise to the starting position
             print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_z_command * 1000))
             suction_experiment.publish_event("Noise")
-            move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
+            move2 = suction_experiment.apply_offset(0, 0, suction_experiment.noise_z_command)
             print("Move 2:",move2)
             # time.sleep(0.1)
 
@@ -256,8 +256,8 @@ def x_noise_experiment(suction_experiment):
             print("Adding cartesian noise of %.2f [mm] in z" % (suction_experiment.noise_x_command * 1000))
             suction_experiment.publish_event("Noise")
             # Note: made the x noise negative, to avoid the robot doing weird movements
-            move2 = suction_experiment.add_cartesian_noise(-1 * suction_experiment.noise_x_command, 0, 0)
-            move2 = suction_experiment.add_cartesian_noise(0, 0, suction_experiment.noise_z_command)
+            move2 = suction_experiment.apply_offset(-1 * suction_experiment.noise_x_command, 0, 0)
+            move2 = suction_experiment.apply_offset(0, 0, suction_experiment.noise_z_command)
             print("Move 2:", move2)
             # time.sleep(0.1)
 
@@ -421,32 +421,32 @@ def calibrate_zero(suction_experiment):
 
         if jog == 'w':
             "Move in +y"
-            suction_experiment.add_cartesian_noise(0, +delta, 0)
+            suction_experiment.apply_offset(0, +delta, 0)
             dy += 1            
 
         elif jog == 's':
             "Move in -y"
-            suction_experiment.add_cartesian_noise(0, -delta, 0)
+            suction_experiment.apply_offset(0, -delta, 0)
             dy -= 1
         
         elif jog =='d':
             "Move in -x"
-            suction_experiment.add_cartesian_noise(-delta, 0, 0)
+            suction_experiment.apply_offset(-delta, 0, 0)
             dx += 1
         
         elif jog == 'a':
             "Move in +x"
-            suction_experiment.add_cartesian_noise(+delta, 0, 0)
+            suction_experiment.apply_offset(+delta, 0, 0)
             dx -= 1
 
         elif jog =='q':
             "Move in -z"
-            suction_experiment.add_cartesian_noise(0, 0, -delta)
+            suction_experiment.apply_offset(0, 0, -delta)
             dz += 1
         
         elif jog == 'z':
             "Move in +z"
-            suction_experiment.add_cartesian_noise(0, 0, +delta)
+            suction_experiment.apply_offset(0, 0, +delta)
             dz -= 1
         
         print("dx= %.0d, dy= %.0d,  dz= %0.d" % (dx, dy, dz))
