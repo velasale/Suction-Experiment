@@ -93,6 +93,7 @@ ros::Publisher publisher_distance("/gripper/distance", &dist_msg);
 // Constants
 const int PCAADR = 0x70;
 const int VALVE_DELAY = 10;
+const int PUBLISH_DELAY = 2;
 
 
 
@@ -172,6 +173,7 @@ void loop() {
 
       if (USE_ROSSERIAL) {
         publisher_pressure[i].publish(&press_msg[i]);
+        delay(PUBLISH_DELAY);
       }
       else {
         //Print the time in ms just to have an idea of long the sensor takes to measure press.
@@ -193,7 +195,8 @@ void loop() {
       }
 
       if (USE_ROSSERIAL){
-        publisher_distance.publish(&dist_msg);        
+        publisher_distance.publish(&dist_msg);      
+        delay(PUBLISH_DELAY);  
       }
       else {
         Serial.println("[Ch" + String(i) +"] " + "Period: " + String(millis() - currentMillis) + " ms, " + "Distance: " + String(dist_msg.data) + " mm");    
