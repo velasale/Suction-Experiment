@@ -70,7 +70,12 @@ def main():
     # location = "/home/alejo/Documents"
     # in_folder = '/data/samples_with_camera/'
     # out_folder = '/data/samples_with_camera/'
-    image_topic = '/usb_cam/image_raw'
+    # image_topic = '/usb_cam/image_raw'
+    # image_topic = '/camera/color/image_raw'
+    # image_topic = '/camera/aligned_depth_to_color/image_raw'
+    image_topic = '/camera/depth/camera_info'
+    image_topic = '/device_0/sensor_1/Color_0/image/data'
+
     #
     # input_folder = location + in_folder
     # output_folder = location + out_folder
@@ -94,9 +99,9 @@ def main():
 
 
     # For a single file
-    input_folder = '/media/alejo/042ba298-5d73-45b6-a7ec-e4419f0e790b/home/avl/data/DATASET5/'
-    file = 'horizontal_#5_pres_60_surface_3DPrintedPrimer_radius_0.0375_noise_18.9_pitch_45.0_rep_1.bag'
-
+    input_folder = '/home/alejo/Documents/temporal/'
+    # file = '20230724_proxy_sample_0_yaw_0_rep_0_stiff_high_force_low.bag'
+    file = 'papa.bag'
     only_filename = file.split(".bag")[0]
     output_dir = input_folder + only_filename + "/pngs/"
 
