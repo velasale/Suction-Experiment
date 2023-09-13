@@ -117,7 +117,7 @@ def main():
 
     FONTSIZE = 24
     TICKSIZE = 22
-    FIGURESIZE = (7, 6.75)    # width, height
+    FIGURESIZE = (10, 8)    # width, height
 
     results = []
     diameters = [75, 85]
@@ -271,6 +271,7 @@ def main():
             radar[i, j] = accu / cnt
 
     plt.figure(figsize=FIGURESIZE)
+    plt.rc('font', family='serif')
     plt.imshow(radar, cmap='Reds', interpolation='nearest', origin='lower')
 
     cbar = plt.colorbar()
@@ -307,9 +308,15 @@ def main():
 
         print(round(max_value, 2), index)
 
-        # plt.text(index[1], index[0], '+', color='yellow', fontsize=FONTSIZE)
+        if th == 24:
+            # This is the chosen offset
+            plt.plot(b, a, marker="*", markersize=25, markeredgecolor="yellow", markerfacecolor="yellow")
+        else:
+            plt.plot(b, a, marker="+", markersize=15, markeredgecolor="yellow", markerfacecolor="yellow")
+
         plt.xticks(size=TICKSIZE)
         plt.yticks(size=TICKSIZE)
+        plt.tight_layout()
 
     plt.show()
 
