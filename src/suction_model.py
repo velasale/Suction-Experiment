@@ -109,6 +109,11 @@ def data_from_pitch_exp(angle, diameter):
 
 
 def main():
+    """
+    This snippet creates the Force Convolution HeatMap with the data
+    from the suction-cup characterization experiments
+    @return:
+    """
 
     map_forces = []
 
