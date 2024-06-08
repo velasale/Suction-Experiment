@@ -98,6 +98,7 @@ def main():
     #         bagToVideo(input_folder, file, output_dir, image_topic, only_filename)
 
 
+
     # For a single file
     input_folder = '/home/alejo/Documents/temporal/'
     # file = '20230724_proxy_sample_0_yaw_0_rep_0_stiff_high_force_low.bag'
